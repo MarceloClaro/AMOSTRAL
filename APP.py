@@ -76,6 +76,84 @@ def create_well_dataset():
     return pd.DataFrame(data)
 
 # Função principal para executar o Streamlit
+import streamlit as st
+import pandas as pd
+import math
+import numpy as np
+from scipy import stats
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+
+# Função PCA para redução de dimensionalidade
+def pca_reducao_dados(df):
+    """
+    Realiza o PCA para reduzir a dimensionalidade dos dados.
+    O PCA é aplicado apenas em variáveis numéricas.
+    """
+    # Seleciona as colunas numéricas
+    colunas_numericas = df.select_dtypes(include=[np.number]).columns
+    df_numerico = df[colunas_numericas].dropna()
+    
+    # Aplica PCA
+    pca = PCA(n_components=min(df_numerico.shape[1], 2))  # Limitar para 2 componentes principais
+    pca_resultado = pca.fit_transform(df_numerico)
+    
+    # Retorna os dados transformados
+    pca_df = pd.DataFrame(data=pca_resultado, columns=['PC1', 'PC2'])
+    return pca_df
+
+# Função para exibição de gráficos PCA
+def exibir_grafico_pca(pca_df):
+    """
+    Exibe um gráfico de dispersão dos componentes principais.
+    """
+    plt.figure(figsize=(8, 6))
+    plt.scatter(pca_df['PC1'], pca_df['PC2'], c='blue', edgecolor='black')
+    plt.title("Gráfico de Dispersão dos Componentes Principais (PCA)", fontsize=14)
+    plt.xlabel('Componente Principal 1')
+    plt.ylabel('Componente Principal 2')
+    plt.grid(True)
+    st.pyplot(plt)
+
+# Função para salvar DataFrame como CSV
+@st.cache_data
+def convert_df_to_csv(dataframe: pd.DataFrame):
+    """
+    Converte um DataFrame para CSV em bytes (UTF-8), 
+    permitindo o uso no st.download_button.
+    """
+    return dataframe.to_csv(index=False).encode('utf-8')
+
+# Função para criar o dataset fictício de poços artesianos
+def create_well_dataset():
+    """
+    Retorna um DataFrame fictício com dados de poços artesianos.
+    """
+    data = {
+        "Well_ID": ["Well_001", "Well_002", "Well_003", "Well_004", "Well_005", 
+                    "Well_006", "Well_007", "Well_008", "Well_009", "Well_010"],
+        "Flow_m3_per_h": [120, 95, 150, 80, 110, 130, 105, 90, 115, 100],
+        "Salinity_ppm": [350, 420, 290, 500, 375, 410, 330, 460, 360, 395],
+        "pH": [7.2, 6.8, 7.4, 7.0, 7.1, 6.9, 7.3, 6.7, 7.0, 7.2],
+        "Calcium_mg_per_L": [150, 180, 130, 160, 155, 170, 140, 165, 150, 158],
+        "Magnesium_mg_per_L": [75, 65, 80, 70, 78, 82, 76, 69, 80, 77],
+        "Sulfate_mg_per_L": [80, 100, 70, 90, 85, 95, 75, 88, 82, 89],
+        "Chloride_mg_per_L": [120, 140, 110, 130, 125, 135, 115, 128, 122, 119],
+        "Geological_Formation": ["Granite", "Shale", "Limestone", "Sandstone", "Granite", 
+                                 "Shale", "Limestone", "Sandstone", "Granite", "Shale"],
+        "Climate_Type": ["Temperate", "Arid", "Subtropical", "Continental", "Temperate", 
+                         "Arid", "Subtropical", "Continental", "Temperate", "Arid"],
+        "Latitude": [40.7128, 34.0522, 29.7604, 41.8781, 39.9526, 
+                     34.0522, 29.7604, 41.8781, 40.7128, 34.0522],
+        "Longitude": [-74.0060, -118.2437, -95.3698, -87.6298, -75.1652, 
+                      -118.2437, -95.3698, -87.6298, -74.0060, -118.2437],
+        "Depth_m": [250, 300, 210, 275, 240, 320, 230, 290, 260, 310]
+    }
+    return pd.DataFrame(data)
+
+# Função principal para executar o Streamlit
 def main():
     st.title("Ferramenta Avançada de Estatística e Cálculo Amostral")
 
@@ -123,7 +201,7 @@ def main():
             key="download_button_1"  # Chave única para o botão de download
         )
 
-        st.markdown("""
+        st.markdown(""" 
         **Interpretação**:
         - O PCA foi aplicado para reduzir a dimensionalidade dos dados, destacando as principais variações.
         - O gráfico de dispersão mostra como os dados estão distribuídos ao longo dos dois primeiros componentes principais.
@@ -156,6 +234,7 @@ def main():
         # Perguntar se o usuário quer continuar para a próxima seção
         if st.button("Continuar para a próxima seção", key="continuar_secao_2"):
             return
+
 
 # SEÇÃO 3: Cálculo de Amostragem - Média
     if menu == "Cálculo de Amostragem - Média":
