@@ -14,16 +14,9 @@ import seaborn as sns  # Para gráficos com Seaborn
 # ===================================================
 @st.cache_data
 def convert_df_to_csv(dataframe: pd.DataFrame):
-    """
-    Converte um DataFrame para CSV em bytes (UTF-8), 
-    permitindo o uso no st.download_button.
-    """
     return dataframe.to_csv(index=False).encode('utf-8')
 
 def create_well_dataset():
-    """
-    Retorna um DataFrame fictício com dados de poços artesianos.
-    """
     data = {
         "Well_ID": ["Well_001", "Well_002", "Well_003", "Well_004", "Well_005", 
                     "Well_006", "Well_007", "Well_008", "Well_009", "Well_010"],
@@ -151,7 +144,7 @@ def anova_two_way(data: pd.DataFrame, col_numerica: str, cat1: str, cat2: str):
 def regressao_linear(data: pd.DataFrame, formula: str):
     data_clean = data.replace([np.inf, -np.inf], np.nan).dropna()
     if data_clean.empty:
-        return "Erro: dados inválidos (NaN/Inf). Verifique limpeza dos dados."
+        return "Erro: dados inválidos (NaN/Inf)."
     try:
         modelo = ols(formula, data=data_clean).fit()
         return modelo.summary().as_text()
@@ -162,7 +155,7 @@ def regressao_logistica(data: pd.DataFrame, formula: str):
     import statsmodels.formula.api as smf
     data_clean = data.replace([np.inf, -np.inf], np.nan).dropna()
     if data_clean.empty:
-        return "Erro: dados inválidos (NaN/Inf). Verifique limpeza dos dados."
+        return "Erro: dados inválidos (NaN/Inf)."
     try:
         modelo = smf.logit(formula, data=data_clean).fit(disp=False)
         return modelo.summary().as_text()
@@ -202,9 +195,8 @@ def fit_q_exponential(data):
 # ===================================================
 def main():
     st.title("Ferramenta Avançada de Estatística e Cálculo Amostral")
-    sns.set_style("whitegrid")  # Ajuste de estilo global do Seaborn
+    sns.set_style("whitegrid")  # Estilo Seaborn
 
-    # Criação do dataset de poços artesianos para exibição e download
     df_wells = create_well_dataset()
 
     menu = st.sidebar.radio("Menu", [
@@ -224,155 +216,94 @@ def main():
         "Q-Exponencial"
     ])
 
-    # =========================================================
     # SEÇÃO 1: Dataset de Poços Artesianos
-    # =========================================================
     if menu == "Dataset de Poços Artesianos":
         st.subheader("Dataset de Poços Artesianos")
-        st.write("Este é um dataset fictício de poços artesianos com informações sobre vazão, salinidade, composição química, clima local e profundidade.")
-
-        # Exibir o DataFrame
-        st.write("Pré-visualização dos dados:")
         st.dataframe(df_wells)
-
-        # Botão para download do arquivo CSV
         csv_bytes = convert_df_to_csv(df_wells)
-        st.download_button(
-            label="Baixar Dataset como CSV",
-            data=csv_bytes,
-            file_name="pocos_artesianos.csv",
-            mime="text/csv",
-        )
-
-        # Exemplo de um gráfico Seaborn (scatterplot) para dois campos numéricos
+        st.download_button("Baixar Dataset como CSV", data=csv_bytes, file_name="pocos_artesianos.csv")
         if st.checkbox("Exibir Gráfico Seaborn (Exemplo)"):
             fig, ax = plt.subplots(figsize=(6,4))
-            sns.scatterplot(data=df_wells, x="Salinity_ppm", y="Flow_m3_per_h", ax=ax, hue="Geological_Formation")
-            ax.set_title("Salinidade vs Vazão Colorido por Formação Geológica", fontsize=12)
+            sns.scatterplot(data=df_wells, x="Salinity_ppm", y="Flow_m3_per_h", hue="Geological_Formation", ax=ax)
+            ax.set_title("Salinidade vs Vazão por Formação Geológica")
             ax.set_xlabel("Salinidade (ppm)")
-            ax.set_ylabel("Vazão (m3/h)")
+            ax.set_ylabel("Vazão (m³/h)")
             st.pyplot(fig)
 
-        st.markdown("""
-        **Interpretação**:
-        - Este dataset possui colunas numéricas (Flow, Salinity, pH, etc.) e colunas categóricas (Geological_Formation, Climate_Type).
-        - Caso seu dataset real tenha valores ausentes (NaN) ou infinitos (Inf), considere limpar ou tratar esses dados antes das análises.
-        """)
-
-    # ---------------------------------------------------------
     # SEÇÃO 2: Cálculo de Amostragem - Proporção
-    # ---------------------------------------------------------
     elif menu == "Cálculo de Amostragem - Proporção":
         st.subheader("Cálculo de Tamanho Amostral para Proporção")
-        populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000, step=1)
-        nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
-        margem_erro = st.slider("Margem de Erro (%)", 1, 50, 5, 1)
-        p_est = st.number_input("Proporção estimada (0.0 a 1.0)", 0.0, 1.0, 0.5, 0.01)
-
+        populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000)
+        nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95)
+        margem_erro = st.slider("Margem de Erro (%)", 1, 50, 5)
+        p_est = st.number_input("Proporção estimada", 0.0, 1.0, 0.5)
         if st.button("Calcular"):
             resultado = tamanho_amostral_proporcao(populacao, nivel_confianca, margem_erro, p_est)
             if resultado:
                 st.success(f"Tamanho amostral recomendado: {resultado}")
-                st.markdown(
-                    f"**Interpretação**: Em uma população de {populacao} indivíduos, com nível de confiança de {nivel_confianca}% "
-                    f"e margem de erro de {margem_erro}%, assumindo que a proporção verdadeira seja de aproximadamente {p_est}, "
-                    f"são necessários {resultado} respondentes para obter resultados com a precisão desejada."
-                )
+                st.markdown("**Interpretação**: Calculado com base nos parâmetros fornecidos.")
             else:
-                st.error("Erro no cálculo. Verifique os parâmetros (margem de erro não pode ser 0%).")
+                st.error("Erro no cálculo. Verifique os parâmetros.")
 
-    # ---------------------------------------------------------
     # SEÇÃO 3: Cálculo de Amostragem - Média
-    # ---------------------------------------------------------
     elif menu == "Cálculo de Amostragem - Média":
         st.subheader("Cálculo de Tamanho Amostral para Média")
-        populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000, step=1)
-        nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
-        margem_erro_abs = st.number_input("Margem de Erro (valor absoluto)", min_value=0.001, value=5.0, step=0.1)
-        desvio_padrao = st.number_input("Desvio-Padrão (σ)", min_value=0.001, value=10.0, step=0.1)
-
+        populacao = st.number_input("População (N)", min_value=1, value=1000)
+        nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95)
+        margem_erro_abs = st.number_input("Margem de Erro (absoluto)", 0.1, 1000.0, 5.0)
+        desvio_padrao = st.number_input("Desvio-Padrão (σ)", 0.1, 1000.0, 10.0)
         if st.button("Calcular"):
             resultado = tamanho_amostral_media(populacao, nivel_confianca, margem_erro_abs, desvio_padrao)
             if resultado:
                 st.success(f"Tamanho amostral recomendado: {resultado}")
-                st.markdown(
-                    f"**Interpretação**: Para {populacao} indivíduos, confiança de {nivel_confianca}%, "
-                    f"margem de erro ±{margem_erro_abs}, desvio-padrão {desvio_padrao}, é necessário {resultado}."
-                )
+                st.markdown("**Interpretação**: Calculado com base nos parâmetros fornecidos.")
             else:
-                st.error("Erro no cálculo. Verifique se a margem de erro não é zero ou negativa.")
+                st.error("Erro no cálculo.")
 
-    # ---------------------------------------------------------
     # SEÇÃO 4: Intervalo de Confiança - Proporção
-    # ---------------------------------------------------------
     elif menu == "Intervalo de Confiança - Proporção":
-        st.subheader("Cálculo de Intervalo de Confiança para Proporção")
-        n = st.number_input("Tamanho da Amostra (n)", min_value=1, value=100, step=1)
-        confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
-        p_obs = st.number_input("Proporção Observada (0.0 a 1.0)", 0.0, 1.0, 0.5, 0.01)
-
+        st.subheader("IC para Proporção")
+        n = st.number_input("Tamanho da Amostra (n)", min_value=1, value=100)
+        confianca = st.slider("Nível de Confiança (%)", 0, 100, 95)
+        p_obs = st.number_input("Proporção Observada", 0.0, 1.0, 0.5)
         if st.button("Calcular Intervalo"):
             ic = intervalo_confianca_proporcao(n, confianca, p_obs)
-            st.info(f"Intervalo de Confiança Aproximado: {ic[0]*100:.2f}% a {ic[1]*100:.2f}%")
-            st.markdown(
-                f"**Interpretação**: Se a proporção amostral é {p_obs*100:.2f}%, com {confianca}% de confiança, "
-                f"o valor real da proporção na população está entre {ic[0]*100:.2f}% e {ic[1]*100:.2f}%."
-            )
+            st.info(f"Intervalo: {ic[0]*100:.2f}% a {ic[1]*100:.2f}%")
+            st.markdown("**Interpretação**: Intervalo de confiança calculado.")
 
-    # ---------------------------------------------------------
     # SEÇÃO 5: Intervalo de Confiança - Média
-    # ---------------------------------------------------------
     elif menu == "Intervalo de Confiança - Média":
-        st.subheader("Cálculo de Intervalo de Confiança para Média")
-        n = st.number_input("Tamanho da Amostra (n)", min_value=1, value=50, step=1)
-        confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
-        media_amostral = st.number_input("Média Observada", value=50.0, step=0.1)
-        desvio_padrao = st.number_input("Desvio-Padrão (σ)", min_value=0.001, value=10.0, step=0.1)
-
+        st.subheader("IC para Média")
+        n = st.number_input("Tamanho da Amostra (n)", min_value=1, value=50)
+        confianca = st.slider("Nível de Confiança (%)", 0, 100, 95)
+        media_amostral = st.number_input("Média Observada", value=50.0)
+        desvio_padrao = st.number_input("Desvio-Padrão (σ)", min_value=0.1, value=10.0)
         if st.button("Calcular Intervalo"):
             ic = intervalo_confianca_media(n, confianca, media_amostral, desvio_padrao)
-            st.info(f"Intervalo de Confiança Aproximado: {ic[0]:.2f} a {ic[1]:.2f}")
-            st.markdown(
-                f"**Interpretação**: Para amostra de {n}, média {media_amostral}, desvio-padrão {desvio_padrao}, "
-                f"confiança {confianca}%, o IC é de {ic[0]:.2f} a {ic[1]:.2f}."
-            )
+            st.info(f"Intervalo: {ic[0]:.2f} a {ic[1]:.2f}")
+            st.markdown("**Interpretação**: Intervalo de confiança calculado.")
 
-    # ---------------------------------------------------------
     # SEÇÃO 6: Estatísticas Descritivas
-    # ---------------------------------------------------------
     elif menu == "Estatísticas Descritivas":
         st.subheader("Estatísticas Descritivas")
-        file = st.file_uploader("CSV", type=["csv"], key="desc")
+        file = st.file_uploader("Upload de CSV", type=["csv"], key="desc")
         if file:
             df = pd.read_csv(file)
-            colunas_num = st.multiselect("Selecione colunas numéricas", [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])])
+            colunas_num = st.multiselect("Colunas numéricas", [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])])
             if colunas_num:
                 stats_desc = estatisticas_descritivas(df[colunas_num].dropna())
                 st.write(stats_desc)
-
-                # Exemplo Seaborn Hist/Box
                 if st.checkbox("Exibir Gráficos Seaborn"):
                     for col in colunas_num:
-                        # HISTOGRAMA
                         fig, ax = plt.subplots(figsize=(6,4))
-                        sns.histplot(data=df, x=col, kde=True, ax=ax, color="blue")
+                        sns.histplot(df[col].dropna(), kde=True, ax=ax, color="blue")
                         ax.set_title(f"Histograma de {col}")
                         st.pyplot(fig)
 
-                    # BOX
-                    if len(colunas_num) == 1:
-                        col_unique = colunas_num[0]
-                        fig, ax = plt.subplots(figsize=(3,6))
-                        sns.boxplot(data=df, y=col_unique, color="lightblue")
-                        ax.set_title(f"Boxplot de {col_unique}")
-                        st.pyplot(fig)
-
-    # ---------------------------------------------------------
     # SEÇÃO 7: Testes de Normalidade
-    # ---------------------------------------------------------
     elif menu == "Testes de Normalidade":
         st.subheader("Testes de Normalidade")
-        file = st.file_uploader("CSV", type=["csv"], key="normal")
+        file = st.file_uploader("Upload de CSV", type=["csv"], key="normal")
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
@@ -380,25 +311,27 @@ def main():
             if st.button("Shapiro-Wilk"):
                 data_series = df[col].dropna()
                 stat, p = teste_shapiro(data_series)
-                st.write(f"Shapiro: Estat={stat:.4f}, p={p:.4f}")
-
-                # Grafico Seaborn
+                st.write(f"Shapiro-Wilk: Estat={stat:.4f}, p={p:.4f}")
+            if st.checkbox("Exibir Histograma e QQ-Plot"):
+                data_series = df[col].dropna()
                 fig, ax = plt.subplots()
                 sns.histplot(data_series, kde=True, ax=ax, color="green")
                 ax.set_title(f"Histograma de {col}")
                 st.pyplot(fig)
+                fig2 = plt.figure()
+                sm.qqplot(data_series, line='s')
+                plt.title(f"QQ-Plot de {col}")
+                st.pyplot(fig2)
+                plt.close(fig2)
 
-    # ---------------------------------------------------------
     # SEÇÃO 8: Testes Não-Paramétricos
-    # ---------------------------------------------------------
     elif menu == "Testes Não-Paramétricos":
         st.subheader("Testes Não-Paramétricos")
-        file = st.file_uploader("CSV", type=["csv"], key="np")
+        file = st.file_uploader("Upload de CSV", type=["csv"], key="np")
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-            colunas_cat = [c for c in df.columns if (df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c]))]
-
+            colunas_cat = [c for c in df.columns if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])]
             col_num = st.selectbox("Coluna Numérica", colunas_num)
             col_cat = st.selectbox("Coluna Categórica", colunas_cat)
 
@@ -407,125 +340,104 @@ def main():
                 if stat is not None and pval is not None:
                     st.write(f"Mann-Whitney: Estat={stat:.4f}, p={pval:.4f}")
                 else:
-                    st.error("A coluna categórica selecionada não possui exatamente 2 grupos.")
-
-                # Boxplot Seaborn
+                    st.error("A coluna categórica não tem exatamente 2 grupos.")
                 fig, ax = plt.subplots()
                 sns.boxplot(data=df, x=col_cat, y=col_num, ax=ax)
-                ax.set_title(f"Boxplot {col_num} por {col_cat}")
+                ax.set_title(f"Boxplot de {col_num} por {col_cat}")
                 st.pyplot(fig)
 
             if st.button("Executar Kruskal-Wallis"):
                 stat, pval = teste_kruskal(df, col_num, col_cat)
                 st.write(f"Kruskal-Wallis: Estat={stat:.4f}, p={pval:.4f}")
-                # Boxplot
                 fig, ax = plt.subplots()
                 sns.boxplot(data=df, x=col_cat, y=col_num, ax=ax, palette="viridis")
-                ax.set_title(f"Boxplot {col_num} por {col_cat}")
+                ax.set_title(f"Boxplot de {col_num} por {col_cat}")
                 st.pyplot(fig)
 
-    # ---------------------------------------------------------
     # SEÇÃO 9: Two-Way ANOVA
-    # ---------------------------------------------------------
     elif menu == "Two-Way ANOVA":
         st.subheader("Two-Way ANOVA")
-        file = st.file_uploader("CSV", type=["csv"], key="anova2")
+        file = st.file_uploader("Upload de CSV", type=["csv"], key="anova2")
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-            colunas_cat = [c for c in df.columns if (df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c]))]
+            colunas_cat = [c for c in df.columns if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])]
             if len(colunas_cat) >= 2 and colunas_num:
-                col_num = st.selectbox("Var. Numérica", colunas_num)
-                cat1 = st.selectbox("Fator1 (cat)", colunas_cat)
-                cat2 = st.selectbox("Fator2 (cat)", colunas_cat)
-
+                col_num = st.selectbox("Variável Numérica", colunas_num)
+                cat1 = st.selectbox("Fator 1", colunas_cat)
+                cat2 = st.selectbox("Fator 2", colunas_cat)
                 if st.button("Executar ANOVA"):
                     res = anova_two_way(df, col_num, cat1, cat2)
                     if res is not None:
                         st.dataframe(res)
-                        # Exemplo de Seaborn catplot
                         fig, ax = plt.subplots()
                         sns.boxplot(data=df, x=cat1, y=col_num, hue=cat2, ax=ax)
-                        ax.set_title(f"Two-Way ANOVA: {col_num} ~ {cat1} + {cat2}")
+                        ax.set_title(f"Boxplot de {col_num} por {cat1} e {cat2}")
                         st.pyplot(fig)
 
-    # ---------------------------------------------------------
     # SEÇÃO 10: Regressões
-    # ---------------------------------------------------------
     elif menu == "Regressões":
         st.subheader("Regressões")
-        file = st.file_uploader("CSV", type=["csv"], key="reg")
+        file = st.file_uploader("Upload de CSV", type=["csv"], key="reg")
         if file:
             df = pd.read_csv(file)
-            formula = st.text_input("Fórmula Ex: Y ~ X + C(Grupo)","")
-            tipo = st.selectbox("Tipo", ["Linear", "Logística"])
+            formula = st.text_input("Fórmula (ex.: 'Y ~ X + C(Grupo)')", "")
+            tipo = st.selectbox("Tipo de Regressão", ["Linear", "Logística"])
             if st.button("Rodar Regressão"):
                 if tipo == "Linear":
-                    out = regressao_linear(df, formula)
-                    st.text_area("Saída da Regressão Linear", out, height=300)
+                    resultado = regressao_linear(df, formula)
+                    st.text_area("Saída da Regressão Linear", resultado, height=300)
                 else:
-                    out = regressao_logistica(df, formula)
-                    st.text_area("Saída da Regressão Logística", out, height=300)
+                    resultado = regressao_logistica(df, formula)
+                    st.text_area("Saída da Regressão Logística", resultado, height=300)
 
-    # ---------------------------------------------------------
-    # SEÇÃO 11: Teste de Hipótese (One-Sample t-test)
-    # ---------------------------------------------------------
+    # SEÇÃO 11: Teste de Hipótese
     elif menu == "Teste de Hipótese":
         st.subheader("Teste de Hipótese (One-Sample t-test)")
-        file = st.file_uploader("CSV", type=["csv"], key="hipo")
+        file = st.file_uploader("Upload de CSV", type=["csv"], key="hipo")
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-            col = st.selectbox("Col. Numérica", colunas_num)
-            media_hipot = st.number_input("Média hipotética", 0.0, 9999.0, 0.0)
+            col = st.selectbox("Coluna Numérica", colunas_num)
+            media_hipot = st.number_input("Média Hipotética", 0.0, 9999.0, 0.0)
             if st.button("Executar t-test"):
                 data_series = df[col].dropna()
                 stat, pval = stats.ttest_1samp(data_series, popmean=media_hipot)
                 st.write(f"T={stat:.4f}, p={pval:.4f}")
-
-                # Exibir hist Seaborn
                 fig, ax = plt.subplots()
-                sns.histplot(data_series, ax=ax, kde=True, color="orange")
+                sns.histplot(data_series, kde=True, ax=ax, color="orange")
                 ax.set_title(f"Histograma de {col}")
                 st.pyplot(fig)
 
-    # ---------------------------------------------------------
     # SEÇÃO 12: Testes de Correlação
-    # ---------------------------------------------------------
     elif menu == "Testes de Correlação":
         st.subheader("Testes de Correlação (Pearson, Spearman, Kendall)")
-        file = st.file_uploader("CSV", type=["csv"], key="corr")
+        file = st.file_uploader("Upload de CSV", type=["csv"], key="corr")
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
             if len(colunas_num) >= 2:
-                x_var = st.selectbox("X", colunas_num)
-                y_var = st.selectbox("Y", colunas_num)
-
+                x_var = st.selectbox("Variável X", colunas_num)
+                y_var = st.selectbox("Variável Y", colunas_num)
                 if st.button("Pearson"):
                     corr, pval = stats.pearsonr(df[x_var].dropna(), df[y_var].dropna())
                     st.write(f"Pearson: r={corr:.4f}, p={pval:.4f}")
-
                 if st.button("Spearman"):
                     corr, pval = stats.spearmanr(df[x_var].dropna(), df[y_var].dropna())
                     st.write(f"Spearman: r={corr:.4f}, p={pval:.4f}")
-
                 if st.button("Kendall"):
                     corr, pval = stats.kendalltau(df[x_var].dropna(), df[y_var].dropna())
                     st.write(f"Kendall: tau={corr:.4f}, p={pval:.4f}")
-
                 if st.checkbox("Exibir Scatterplot Seaborn"):
                     fig, ax = plt.subplots()
                     sns.scatterplot(data=df, x=x_var, y=y_var, ax=ax)
                     ax.set_title(f"Dispersão entre {x_var} e {y_var}")
                     st.pyplot(fig)
 
-    # ---------------------------------------------------------
-    # SEÇÃO 13: Q-Estatística (Cochrane's Q)
-    # ---------------------------------------------------------
+    # SEÇÃO 13: Q-Estatística
     elif menu == "Q-Estatística":
         st.subheader("Cálculo de Q-Estatística (Cochrane’s Q)")
-        file = st.file_uploader("CSV", type=["csv"], key="qstat")
+        file = st.file_uploader("Upload de CSV", type=["csv"], key="qstat")
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
             if st.button("Calcular Q"):
@@ -539,12 +451,10 @@ def main():
                 except Exception as e:
                     st.error(f"Erro: {e}")
 
-    # ---------------------------------------------------------
     # SEÇÃO 14: Q-Exponencial
-    # ---------------------------------------------------------
     elif menu == "Q-Exponencial":
-        st.subheader("Ajuste Q-Exponencial (Estatística de Tsallis)")
-        file = st.file_uploader("CSV", type=["csv"], key="qexp")
+        st.subheader("Ajuste Q-Exponencial (Tsallis)")
+        file = st.file_uploader("Upload de CSV", type=["csv"], key="qexp")
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
@@ -552,27 +462,22 @@ def main():
             if st.button("Ajustar Q-Exponencial"):
                 data_series = df[col].dropna()
                 if len(data_series) == 0:
-                    st.error("A coluna selecionada não possui dados numéricos válidos (após remover NaN/Inf).")
+                    st.error("A coluna selecionada não possui dados numéricos válidos.")
                 else:
                     try:
                         lam_fit, q_fit = fit_q_exponential(data_series)
                         st.write(f"Parâmetros ajustados: λ = {lam_fit:.4f}, q = {q_fit:.4f}")
-
-                        # Plotar hist + curva
-                        counts, bins = np.histogram(data_series, bins=30, density=True)
-                        xvals = 0.5*(bins[1:]+bins[:-1])
                         fig, ax = plt.subplots(figsize=(6,4))
-                        sns.histplot(data_series, bins=30, stat="density", ax=ax, color="grey", edgecolor="black", alpha=0.5, label="Dados")
-                        x_smooth = np.linspace(xvals.min(), xvals.max(), 200)
+                        sns.histplot(data_series, bins=30, stat="density", color="grey", edgecolor="black", alpha=0.5, label="Dados", ax=ax)
+                        x_smooth = np.linspace(data_series.min(), data_series.max(), 200)
                         y_smooth = q_exponential_pdf(x_smooth, lam_fit, q_fit)
-                        ax.plot(x_smooth, y_smooth, 'r-', label="Curva q-exponencial ajustada")
+                        ax.plot(x_smooth, y_smooth, 'r-', label="Curva q-exponencial")
                         ax.set_title("Ajuste Q-Exponencial (Tsallis)")
                         ax.set_xlabel(col)
                         ax.set_ylabel("Densidade")
                         ax.legend()
                         st.pyplot(fig)
                         plt.close(fig)
-
                     except Exception as e:
                         st.error(f"Falha ao ajustar Q-Exponencial: {e}")
 
