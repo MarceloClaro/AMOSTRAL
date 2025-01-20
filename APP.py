@@ -1,10 +1,8 @@
 import streamlit as st
 import pandas as pd
-import math
 import numpy as np
 from scipy import stats
 import statsmodels.api as sm
-from statsmodels.formula.api import ols
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 
@@ -14,15 +12,12 @@ def pca_reducao_dados(df):
     Realiza o PCA para reduzir a dimensionalidade dos dados.
     O PCA é aplicado apenas em variáveis numéricas.
     """
-    # Seleciona as colunas numéricas
     colunas_numericas = df.select_dtypes(include=[np.number]).columns
     df_numerico = df[colunas_numericas].dropna()
-    
-    # Aplica PCA
+
     pca = PCA(n_components=min(df_numerico.shape[1], 2))  # Limitar para 2 componentes principais
     pca_resultado = pca.fit_transform(df_numerico)
-    
-    # Retorna os dados transformados
+
     pca_df = pd.DataFrame(data=pca_resultado, columns=['PC1', 'PC2'])
     return pca_df
 
@@ -43,8 +38,7 @@ def exibir_grafico_pca(pca_df):
 @st.cache_data
 def convert_df_to_csv(dataframe: pd.DataFrame):
     """
-    Converte um DataFrame para CSV em bytes (UTF-8), 
-    permitindo o uso no st.download_button.
+    Converte um DataFrame para CSV em bytes (UTF-8), permitindo o uso no st.download_button.
     """
     return dataframe.to_csv(index=False).encode('utf-8')
 
@@ -75,66 +69,10 @@ def create_well_dataset():
     }
     return pd.DataFrame(data)
 
-# Função para cálculo de tamanho amostral para proporção
-def tamanho_amostral_proporcao(populacao, nivel_confianca, margem_erro, p_est):
-    """
-    Calcula o tamanho amostral necessário para estimar uma proporção.
-    
-    Parameters:
-    - populacao: Tamanho da população (N).
-    - nivel_confianca: Nível de confiança (em %).
-    - margem_erro: Margem de erro (em %).
-    - p_est: Proporção estimada.
-    
-    Returns:
-    - tamanho amostral calculado.
-    """
-    # Z-valor para o nível de confiança (95% de confiança por padrão)
-    z = stats.norm.ppf(1 - (1 - nivel_confianca / 100) / 2)
-    
-    # Convertendo a margem de erro de percentual para decimal
-    margem_erro = margem_erro / 100
-    
-    # Fórmula para o tamanho amostral para proporção
-    n = (z ** 2 * p_est * (1 - p_est)) / (margem_erro ** 2)
-    
-    # Corrige para populações finitas
-    n_corrigido = n / (1 + (n - 1) / populacao)
-    
-    # Arredonda para o inteiro mais próximo
-    return math.ceil(n_corrigido)
-
-# Função para cálculo de tamanho amostral para média
-def tamanho_amostral_media(populacao, nivel_confianca, margem_erro_abs, desvio_padrao):
-    """
-    Calcula o tamanho amostral necessário para estimar a média de uma população.
-    
-    Parameters:
-    - populacao: Tamanho da população (N).
-    - nivel_confianca: Nível de confiança (em %).
-    - margem_erro_abs: Margem de erro absoluta (em unidades da variável de interesse).
-    - desvio_padrao: Desvio-padrão da população.
-    
-    Returns:
-    - tamanho amostral calculado.
-    """
-    # Z-valor para o nível de confiança (95% de confiança por padrão)
-    z = stats.norm.ppf(1 - (1 - nivel_confianca / 100) / 2)
-    
-    # Fórmula para o tamanho amostral para média
-    n = (z ** 2 * desvio_padrao ** 2) / (margem_erro_abs ** 2)
-    
-    # Corrige para populações finitas
-    n_corrigido = n / (1 + (n - 1) / populacao)
-    
-    # Arredonda para o inteiro mais próximo
-    return math.ceil(n_corrigido)
-
 # Função principal para executar o Streamlit
 def main():
     st.title("Ferramenta Avançada de Estatística e Cálculo Amostral")
 
-    # Criação do dataset de poços artesianos para exibição e download
     df_wells = create_well_dataset()
 
     # Usando uma chave única para o menu
@@ -153,18 +91,15 @@ def main():
         "Testes de Correlação",
         "Q-Estatística",
         "Q-Exponencial"
-    ], key="menu_radio_1")  # Chave exclusiva para o radio
+    ], key="menu_radio_1")
 
     # SEÇÃO 1: Dataset de Poços Artesianos
     if menu == "Dataset de Poços Artesianos":
         st.subheader("Dataset de Poços Artesianos")
         st.write("Este é um dataset fictício de poços artesianos com informações sobre vazão, salinidade, composição química, clima local e profundidade.")
-
-        # Exibir o DataFrame
         st.write("Pré-visualização dos dados:")
         st.dataframe(df_wells)
 
-        # Aplicar PCA para redução de dimensionalidade
         pca_df = pca_reducao_dados(df_wells)
         exibir_grafico_pca(pca_df)
 
@@ -175,7 +110,7 @@ def main():
             data=csv_bytes,
             file_name="pocos_artesianos.csv",
             mime="text/csv",
-            key="download_button_1"  # Chave única para o botão de download
+            key="download_button_1"
         )
 
         st.markdown(""" 
@@ -184,12 +119,11 @@ def main():
         - O gráfico de dispersão mostra como os dados estão distribuídos ao longo dos dois primeiros componentes principais.
         """)
 
-        # Perguntar se o usuário quer continuar para a próxima seção
         if st.button("Continuar para a próxima seção", key="continuar_secao_1"):
             return
 
     # SEÇÃO 2: Cálculo de Amostragem - Proporção
-    if menu == "Cálculo de Amostragem - Proporção":
+    elif menu == "Cálculo de Amostragem - Proporção":
         st.subheader("Cálculo de Tamanho Amostral para Proporção")
         populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000, step=1, key="populacao_input_1")
         nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1, key="nivel_confianca_slider_1")
@@ -208,12 +142,11 @@ def main():
             else:
                 st.error("Erro no cálculo. Verifique os parâmetros informados.")
 
-        # Perguntar se o usuário quer continuar para a próxima seção
         if st.button("Continuar para a próxima seção", key="continuar_secao_2"):
             return
 
-# SEÇÃO 3: Cálculo de Amostragem - Média
-    if menu == "Cálculo de Amostragem - Média":
+    # SEÇÃO 3: Cálculo de Amostragem - Média
+    elif menu == "Cálculo de Amostragem - Média":
         st.subheader("Cálculo de Tamanho Amostral para Média")
         populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000, step=1, key="populacao_input_2")
         nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1, key="nivel_confianca_slider_2")
@@ -232,38 +165,9 @@ def main():
             else:
                 st.error("Erro no cálculo. Verifique os parâmetros informados.")
 
-        # Perguntar se o usuário quer continuar para a próxima seção
         if st.button("Continuar para a próxima seção", key="continuar_secao_3"):
             return
 
-
-# Adicione as outras seções conforme necessário.
-# Funções auxiliares para as seções seguintes
-# Função para o cálculo do intervalo de confiança para proporção
-def intervalo_confianca_proporcao(n, confianca, p_obs):
-    z = stats.norm.ppf(1 - (1 - confianca / 100) / 2)
-    erro = z * math.sqrt(p_obs * (1 - p_obs) / n)
-    return p_obs - erro, p_obs + erro
-
-# Função para o cálculo do intervalo de confiança para média
-def intervalo_confianca_media(n, confianca, media_amostral, desvio_padrao):
-    z = stats.norm.ppf(1 - (1 - confianca / 100) / 2)
-    erro = z * (desvio_padrao / math.sqrt(n))
-    return media_amostral - erro, media_amostral + erro
-
-# Função para cálculo de estatísticas descritivas
-def estatisticas_descritivas(df):
-    return df.describe()
-
-# Função para realizar o teste de normalidade de Shapiro-Wilk
-def teste_shapiro(df):
-    stat, p = stats.shapiro(df)
-    return stat, p
-
-# Função para realizar o teste de Kolmogorov-Smirnov
-def teste_ks(df):
-    stat, p = stats.kstest(df, 'norm')
-    return stat, p
 
 # SEÇÃO 4: Intervalo de Confiança - Proporção
     elif menu == "Intervalo de Confiança - Proporção":
