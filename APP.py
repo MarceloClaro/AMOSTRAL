@@ -483,19 +483,37 @@ def main():
                         st.error("A análise Two-Way ANOVA não pôde ser realizada. Verifique seus dados e seleções.")
 
     # SEÇÃO 10: Regressões com geração automática de fórmula
-
+    # SEÇÃO 10: Regressões com geração automática de fórmula
     elif menu == "Regressões":
         st.subheader("Regressões")
+        st.markdown(r"""
+            **Orientações Gerais para Regressões**:
+            ### Para Leigos de 9 Anos:
+            - **O que é regressão?** Imagine que queremos prever algo com base em outras informações. 
+              Por exemplo, prever a altura de uma planta dependendo da quantidade de água e sol. 
+              A **regressão linear** tenta encontrar uma linha que melhor explique como uma coisa muda 
+              com outra. A **regressão logística** é usada quando queremos prever algo que só pode ser "sim" ou "não" 
+              (como aprovar ou reprovar um aluno).
+            - **Como o aplicativo gera a fórmula?** Você escolhe o que quer prever e os fatores que 
+              acha que influenciam. O aplicativo junta isso em uma equação automaticamente para você.
+
+            ### Para PhDs:
+            - Esta seção fornece uma interface interativa para especificação automática de fórmulas de regressão, 
+              permitindo a incorporação de variáveis categóricas usando \(C()\).
+            - A interpretação de métricas como \(R^2\), p-valores e coeficientes é fornecida para regressões 
+              lineares e logísticas, facilitando análises avançadas.
+        """)
+
         file = st.file_uploader("Upload de CSV para regressão", type=["csv"], key="reg")
         if file:
             df = pd.read_csv(file)
             numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
             categorical_cols = [c for c in df.columns if not pd.api.types.is_numeric_dtype(df[c])]
 
-            st.markdown("Selecione a variável dependente:")
+            st.markdown("**Selecione a variável dependente:**")
             dep_var = st.selectbox("Variável Dependente", numeric_cols)
 
-            st.markdown("Selecione as variáveis independentes:")
+            st.markdown("**Selecione as variáveis independentes:**")
             indep_vars = st.multiselect("Variáveis Independentes", df.columns.tolist())
 
             # Gera fórmula automaticamente
@@ -507,26 +525,36 @@ def main():
                     terms.append(var)
             if dep_var and terms:
                 auto_formula = f"{dep_var} ~ " + " + ".join(terms)
-                st.write(f"Fórmula gerada automaticamente: {auto_formula}")
+                st.markdown("**Fórmula gerada automaticamente:**")
+                st.code(auto_formula)
             else:
-                st.write("Por favor, selecione variáveis para gerar a fórmula.")
+                st.markdown("Por favor, selecione uma variável dependente e variáveis independentes para gerar a fórmula.")
 
             tipo = st.selectbox("Tipo de Regressão", ["Linear", "Logística"])
             if st.button("Executar Regressão"):
                 if not dep_var or not terms:
-                    st.error("Variável dependente ou independentes não definidos.")
+                    st.error("Variável dependente ou independentes não definidos. Certifique-se de selecionar as variáveis necessárias.")
                 else:
                     if tipo == "Linear":
                         # Execução da regressão linear
                         data_clean = df.replace([np.inf, -np.inf], np.nan).dropna()
                         if data_clean.empty:
-                            st.error("Dados insuficientes após limpeza.")
+                            st.error("Dados insuficientes após limpeza. Verifique seu dataset para valores ausentes ou infinitos.")
                         else:
                             try:
                                 modelo = ols(auto_formula, data=data_clean).fit()
                                 st.text_area("Resumo da Regressão Linear", modelo.summary().as_text(), height=300)
                                 
-                                # Extração de métricas principais
+                                st.markdown("#### Fórmula da Regressão Linear:")
+                                st.latex(r"Y = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \dots + \epsilon")
+                                st.markdown(r"""
+                                    Onde:
+                                    - \(Y\) é a variável dependente.
+                                    - \(\beta_0\) é o intercepto.
+                                    - \(\beta_1, \beta_2, \dots\) são os coeficientes para as variáveis independentes \(X_1, X_2, \dots\).
+                                    - \(\epsilon\) é o erro residual.
+                                """)
+
                                 r2 = modelo.rsquared
                                 adj_r2 = modelo.rsquared_adj
                                 st.markdown(f"**R-quadrado (R²)**: {r2:.3f}")
@@ -537,16 +565,19 @@ def main():
                                     significance = "Significativo" if pval < 0.05 else "Não significativo"
                                     st.markdown(f"- **{param}**: coeficiente = {coef:.3f}, p-valor = {pval:.3f} ({significance})")
                                 
-                                st.markdown(
-                                    "**Interpretação**: "
-                                    "Um R² próximo de 1 indica que o modelo explica bem a variação dos dados. "
-                                    "Coeficientes com p-valor < 0.05 sugerem que as variáveis têm impacto estatístico significativo na variável dependente."
-                                )
+                                st.markdown("""
+                                    **Interpretação Geral da Regressão Linear**:
+                                    - Um \(R^2\) próximo de 1 indica que o modelo explica bem a variação dos dados.
+                                    - Coeficientes com p-valores menores que 0.05 sugerem que as variáveis independentes 
+                                      influenciam significativamente a variável dependente.
+                                    - O sinal e a magnitude dos coeficientes indicam a direção e a força da relação.
+                                    - Para um entendimento mais profundo, considere aspectos como multicolinearidade 
+                                      e verifique os pressupostos do modelo (normalidade dos resíduos, homocedasticidade, etc.).
+                                """)
                             except Exception as e:
                                 st.error(f"Erro na regressão linear: {e}")
-
                     else:
-                        # Verificação para regressão logística
+                        # Regressão Logística
                         unique_vals = df[dep_var].dropna().unique()
                         if not set(unique_vals).issubset({0,1}):
                             st.error("Para regressão logística, a variável dependente deve ser binária (0 ou 1).")
@@ -554,10 +585,13 @@ def main():
                             try:
                                 resultado = regressao_logistica(df, auto_formula)
                                 st.text_area("Saída da Regressão Logística", resultado, height=300)
-                                st.markdown(
-                                    "**Interpretação**: Analise coeficientes, p-valores e odds-ratios. "
-                                    "Coeficientes significativos (p < 0.05) indicam efeito estatístico nas probabilidades."
-                                )
+                                st.markdown("""
+                                    **Interpretação da Regressão Logística**:
+                                    - A regressão logística estima a probabilidade de um evento binário.
+                                    - Os coeficientes representam mudanças no logaritmo das odds (log-odds) para uma unidade de mudança nas variáveis independentes.
+                                    - Coeficientes com p-valores < 0.05 indicam efeitos estatisticamente significativos.
+                                    - Analise os odds-ratios (exp(coeficiente)) para entender o impacto prático das variáveis.
+                                """)
                             except Exception as e:
                                 st.error(f"Erro na regressão logística: {e}")
 
