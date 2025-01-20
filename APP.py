@@ -119,6 +119,7 @@ def main():
             data=csv_bytes,
             file_name="pocos_artesianos.csv",
             mime="text/csv",
+            key="download_button"
         )
 
         st.markdown("""
@@ -128,18 +129,18 @@ def main():
         """)
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção", key="continuar_1"):
+        if st.button("Continuar para a próxima seção", key="continuar_secao_1"):
             return
 
     # SEÇÃO 2: Cálculo de Amostragem - Proporção
     if menu == "Cálculo de Amostragem - Proporção":
         st.subheader("Cálculo de Tamanho Amostral para Proporção")
-        populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000, step=1)
-        nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
-        margem_erro = st.slider("Margem de Erro (%)", 1, 50, 5, 1)
-        p_est = st.number_input("Proporção estimada (0.0 a 1.0)", 0.0, 1.0, 0.5, 0.01)
+        populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000, step=1, key="populacao_input")
+        nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1, key="nivel_confianca_slider")
+        margem_erro = st.slider("Margem de Erro (%)", 1, 50, 5, 1, key="margem_erro_slider")
+        p_est = st.number_input("Proporção estimada (0.0 a 1.0)", 0.0, 1.0, 0.5, 0.01, key="proporcao_input")
 
-        if st.button("Calcular", key="calcular_proporcao"):
+        if st.button("Calcular", key="calcular_button_1"):
             resultado = tamanho_amostral_proporcao(populacao, nivel_confianca, margem_erro, p_est)
             if resultado:
                 st.success(f"Tamanho amostral recomendado: {resultado}")
@@ -152,7 +153,7 @@ def main():
                 st.error("Erro no cálculo. Verifique os parâmetros informados.")
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção", key="continuar_2"):
+        if st.button("Continuar para a próxima seção", key="continuar_secao_2"):
             return
 
 # SEÇÃO 3: Cálculo de Amostragem - Média
