@@ -377,7 +377,7 @@ def main():
 
 
     # SEÇÃO 10: Regressões com geração automática de fórmula
-    # SEÇÃO 8: Regressões com geração automática de fórmula
+
     elif menu == "Regressões":
         st.subheader("Regressões")
         file = st.file_uploader("Upload de CSV para regressão", type=["csv"], key="reg")
@@ -411,25 +411,49 @@ def main():
                     st.error("Variável dependente ou independentes não definidos.")
                 else:
                     if tipo == "Linear":
-                        resultado = regressao_linear(df, auto_formula)
-                        st.text_area("Saída da Regressão Linear", resultado, height=300)
-                        st.markdown(
-                            "**Interpretação**: Analise os coeficientes, p-valores e estatísticas de ajuste. "
-                            "Coeficientes significativos (p < 0.05) indicam relação estatística entre as variáveis."
-                        )
+                        # Execução da regressão linear
+                        data_clean = df.replace([np.inf, -np.inf], np.nan).dropna()
+                        if data_clean.empty:
+                            st.error("Dados insuficientes após limpeza.")
+                        else:
+                            try:
+                                modelo = ols(auto_formula, data=data_clean).fit()
+                                st.text_area("Resumo da Regressão Linear", modelo.summary().as_text(), height=300)
+                                
+                                # Extração de métricas principais
+                                r2 = modelo.rsquared
+                                adj_r2 = modelo.rsquared_adj
+                                st.markdown(f"**R-quadrado (R²)**: {r2:.3f}")
+                                st.markdown(f"**R-quadrado ajustado**: {adj_r2:.3f}")
+                                
+                                st.markdown("#### Coeficientes e Significância:")
+                                for param, coef, pval in zip(modelo.params.index, modelo.params.values, modelo.pvalues):
+                                    significance = "Significativo" if pval < 0.05 else "Não significativo"
+                                    st.markdown(f"- **{param}**: coeficiente = {coef:.3f}, p-valor = {pval:.3f} ({significance})")
+                                
+                                st.markdown(
+                                    "**Interpretação**: "
+                                    "Um R² próximo de 1 indica que o modelo explica bem a variação dos dados. "
+                                    "Coeficientes com p-valor < 0.05 sugerem que as variáveis têm impacto estatístico significativo na variável dependente."
+                                )
+                            except Exception as e:
+                                st.error(f"Erro na regressão linear: {e}")
+
                     else:
                         # Verificação para regressão logística
                         unique_vals = df[dep_var].dropna().unique()
                         if not set(unique_vals).issubset({0,1}):
                             st.error("Para regressão logística, a variável dependente deve ser binária (0 ou 1).")
                         else:
-                            resultado = regressao_logistica(df, auto_formula)
-                            st.text_area("Saída da Regressão Logística", resultado, height=300)
-                            st.markdown(
-                                "**Interpretação**: Analise os coeficientes, p-valores e odds-ratios. "
-                                "Coeficientes significativos (p < 0.05) indicam que as variáveis independentes "
-                                "têm efeito estatístico na probabilidade do evento."
-                            )
+                            try:
+                                resultado = regressao_logistica(df, auto_formula)
+                                st.text_area("Saída da Regressão Logística", resultado, height=300)
+                                st.markdown(
+                                    "**Interpretação**: Analise coeficientes, p-valores e odds-ratios. "
+                                    "Coeficientes significativos (p < 0.05) indicam efeito estatístico nas probabilidades."
+                                )
+                            except Exception as e:
+                                st.error(f"Erro na regressão logística: {e}")
 
     # SEÇÃO 11: Teste de Hipótese
     elif menu == "Teste de Hipótese":
