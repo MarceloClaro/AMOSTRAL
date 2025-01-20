@@ -75,6 +75,61 @@ def create_well_dataset():
     }
     return pd.DataFrame(data)
 
+# Função para cálculo de tamanho amostral para proporção
+def tamanho_amostral_proporcao(populacao, nivel_confianca, margem_erro, p_est):
+    """
+    Calcula o tamanho amostral necessário para estimar uma proporção.
+    
+    Parameters:
+    - populacao: Tamanho da população (N).
+    - nivel_confianca: Nível de confiança (em %).
+    - margem_erro: Margem de erro (em %).
+    - p_est: Proporção estimada.
+    
+    Returns:
+    - tamanho amostral calculado.
+    """
+    # Z-valor para o nível de confiança (95% de confiança por padrão)
+    z = stats.norm.ppf(1 - (1 - nivel_confianca / 100) / 2)
+    
+    # Convertendo a margem de erro de percentual para decimal
+    margem_erro = margem_erro / 100
+    
+    # Fórmula para o tamanho amostral para proporção
+    n = (z ** 2 * p_est * (1 - p_est)) / (margem_erro ** 2)
+    
+    # Corrige para populações finitas
+    n_corrigido = n / (1 + (n - 1) / populacao)
+    
+    # Arredonda para o inteiro mais próximo
+    return math.ceil(n_corrigido)
+
+# Função para cálculo de tamanho amostral para média
+def tamanho_amostral_media(populacao, nivel_confianca, margem_erro_abs, desvio_padrao):
+    """
+    Calcula o tamanho amostral necessário para estimar a média de uma população.
+    
+    Parameters:
+    - populacao: Tamanho da população (N).
+    - nivel_confianca: Nível de confiança (em %).
+    - margem_erro_abs: Margem de erro absoluta (em unidades da variável de interesse).
+    - desvio_padrao: Desvio-padrão da população.
+    
+    Returns:
+    - tamanho amostral calculado.
+    """
+    # Z-valor para o nível de confiança (95% de confiança por padrão)
+    z = stats.norm.ppf(1 - (1 - nivel_confianca / 100) / 2)
+    
+    # Fórmula para o tamanho amostral para média
+    n = (z ** 2 * desvio_padrao ** 2) / (margem_erro_abs ** 2)
+    
+    # Corrige para populações finitas
+    n_corrigido = n / (1 + (n - 1) / populacao)
+    
+    # Arredonda para o inteiro mais próximo
+    return math.ceil(n_corrigido)
+
 # Função principal para executar o Streamlit
 def main():
     st.title("Ferramenta Avançada de Estatística e Cálculo Amostral")
@@ -180,19 +235,49 @@ def main():
         # Perguntar se o usuário quer continuar para a próxima seção
         if st.button("Continuar para a próxima seção", key="continuar_secao_3"):
             return
+
+
+# Adicione as outras seções conforme necessário.
+# Funções auxiliares para as seções seguintes
+# Função para o cálculo do intervalo de confiança para proporção
+def intervalo_confianca_proporcao(n, confianca, p_obs):
+    z = stats.norm.ppf(1 - (1 - confianca / 100) / 2)
+    erro = z * math.sqrt(p_obs * (1 - p_obs) / n)
+    return p_obs - erro, p_obs + erro
+
+# Função para o cálculo do intervalo de confiança para média
+def intervalo_confianca_media(n, confianca, media_amostral, desvio_padrao):
+    z = stats.norm.ppf(1 - (1 - confianca / 100) / 2)
+    erro = z * (desvio_padrao / math.sqrt(n))
+    return media_amostral - erro, media_amostral + erro
+
+# Função para cálculo de estatísticas descritivas
+def estatisticas_descritivas(df):
+    return df.describe()
+
+# Função para realizar o teste de normalidade de Shapiro-Wilk
+def teste_shapiro(df):
+    stat, p = stats.shapiro(df)
+    return stat, p
+
+# Função para realizar o teste de Kolmogorov-Smirnov
+def teste_ks(df):
+    stat, p = stats.kstest(df, 'norm')
+    return stat, p
+
 # SEÇÃO 4: Intervalo de Confiança - Proporção
     elif menu == "Intervalo de Confiança - Proporção":
         st.subheader("Cálculo de Intervalo de Confiança para Proporção")
-        n = st.number_input("Tamanho da Amostra (n)", min_value=1, value=100, step=1, key="tamanho_amostra_proporcao")
-        confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1, key="nivel_confianca_proporcao")
-        p_obs = st.number_input("Proporção Observada (0.0 a 1.0)", 0.0, 1.0, 0.5, 0.01, key="proporcao_observada")
+        n = st.number_input("Tamanho da Amostra (n)", min_value=1, value=100, step=1)
+        confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
+        p_obs = st.number_input("Proporção Observada (0.0 a 1.0)", 0.0, 1.0, 0.5, 0.01)
 
-        if st.button("Calcular Intervalo", key="calcular_intervalo_proporcao"):
+        if st.button("Calcular Intervalo"):
             ic = intervalo_confianca_proporcao(n, confianca, p_obs)
             st.info(f"Intervalo de Confiança Aproximado: {ic[0]*100:.2f}% a {ic[1]*100:.2f}%")
             st.markdown(
                 f"**Interpretação**: Com {confianca}% de confiança, se a proporção amostral for {p_obs*100:.2f}%, "
-                f"o valor real da proporção populacional deve estar entre {ic[0]*100:.2f}% e {ic[1]*100:.2f}%. "
+                f"o valor real da proporção populacional deve estar entre {ic[0]*100:.2f}% e {ic[1]*100:.2f}%."
             )
 
         # Perguntar se o usuário quer continuar para a próxima seção
@@ -202,12 +287,12 @@ def main():
 # SEÇÃO 5: Intervalo de Confiança - Média
     elif menu == "Intervalo de Confiança - Média":
         st.subheader("Cálculo de Intervalo de Confiança para Média")
-        n = st.number_input("Tamanho da Amostra (n)", min_value=1, value=50, step=1, key="tamanho_amostra_media")
-        confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1, key="nivel_confianca_media")
-        media_amostral = st.number_input("Média Observada", value=50.0, step=0.1, key="media_observada")
-        desvio_padrao = st.number_input("Desvio-Padrão (σ)", min_value=0.001, value=10.0, step=0.1, key="desvio_padrao_media")
+        n = st.number_input("Tamanho da Amostra (n)", min_value=1, value=50, step=1)
+        confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
+        media_amostral = st.number_input("Média Observada", value=50.0, step=0.1)
+        desvio_padrao = st.number_input("Desvio-Padrão (σ)", min_value=0.001, value=10.0, step=0.1)
 
-        if st.button("Calcular Intervalo", key="calcular_intervalo_media"):
+        if st.button("Calcular Intervalo"):
             ic = intervalo_confianca_media(n, confianca, media_amostral, desvio_padrao)
             st.info(f"Intervalo de Confiança Aproximado: {ic[0]:.2f} a {ic[1]:.2f}")
             st.markdown(
@@ -223,11 +308,11 @@ def main():
 # SEÇÃO 6: Estatísticas Descritivas
     elif menu == "Estatísticas Descritivas":
         st.subheader("Estatísticas Descritivas")
-        st.markdown(""" 
+        st.markdown("""
             **Dica**: Se houver valores ausentes ou infinitos no seu dataset, 
             considere removê-los ou tratá-los antes de gerar estatísticas confiáveis.
         """)
-        file = st.file_uploader("Faça upload de um arquivo CSV", type=["csv"], key="desc_upload")
+        file = st.file_uploader("Faça upload de um arquivo CSV", type=["csv"], key="desc")
         if file:
             df = pd.read_csv(file)
             st.write("Exemplo de dados:")
@@ -235,8 +320,7 @@ def main():
             colunas_num = st.multiselect(
                 "Selecione colunas numéricas (ex.: valores contínuos ou inteiros)",
                 df.columns.tolist(),
-                default=[c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])],
-                key="colunas_num_desc"
+                default=[c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
             )
             if colunas_num:
                 desc = estatisticas_descritivas(df[colunas_num].replace([np.inf, -np.inf], np.nan).dropna())
@@ -253,15 +337,15 @@ def main():
 # SEÇÃO 7: Testes de Normalidade
     elif menu == "Testes de Normalidade":
         st.subheader("Testes de Normalidade")
-        file = st.file_uploader("Upload CSV para testes de normalidade", type=["csv"], key="normal_upload")
+        file = st.file_uploader("Upload CSV para testes de normalidade", type=["csv"], key="normal")
         if file:
             df = pd.read_csv(file)
             st.write("Exemplo de dados:")
             st.dataframe(df.head())
             coluna = st.selectbox("Selecione a coluna numérica para teste de normalidade", 
-                                  [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])], key="coluna_normalidade")
+                                  [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])])
 
-            if st.button("Executar Shapiro-Wilk", key="shapiro_button"):
+            if st.button("Executar Shapiro-Wilk"):
                 stat, p = teste_shapiro(df[coluna])
                 st.write(f"Shapiro-Wilk: Estatística={stat:.4f}, p-valor={p:.4f}")
                 if p < 0.05:
@@ -272,7 +356,7 @@ def main():
                     "**Interpretação**: p-valor < 0.05 indica que a amostra provavelmente não segue distribuição normal."
                 )
 
-            if st.button("Executar Kolmogorov-Smirnov", key="ks_button"):
+            if st.button("Executar Kolmogorov-Smirnov"):
                 stat, p = teste_ks(df[coluna])
                 st.write(f"K-S Test: Estatística={stat:.4f}, p-valor={p:.4f}")
                 if p < 0.05:
@@ -290,16 +374,16 @@ def main():
 # SEÇÃO 8: Testes Não-Paramétricos
     elif menu == "Testes Não-Paramétricos":
         st.subheader("Testes Não-Paramétricos")
-        file = st.file_uploader("Upload CSV para testes não-paramétricos", type=["csv"], key="np_upload")
+        file = st.file_uploader("Upload CSV para testes não-paramétricos", type=["csv"], key="np")
         if file:
             df = pd.read_csv(file)
             st.write("Exemplo de dados:")
             st.dataframe(df.head())
-            col_num = st.selectbox("Coluna Numérica", [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])], key="coluna_num_np")
+            col_num = st.selectbox("Coluna Numérica", [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])])
             col_cat = st.selectbox("Coluna Categórica", [c for c in df.columns 
-                                                         if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])], key="coluna_cat_np")
+                                                         if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])])
 
-            if st.button("Executar Mann-Whitney", key="mannwhitney_button"):
+            if st.button("Executar Mann-Whitney"):
                 stat, p = teste_mannwhitney(df, col_num, col_cat)
                 if stat is not None:
                     st.write(f"Mann-Whitney: Estatística={stat:.4f}, p-valor={p:.4f}")
@@ -314,7 +398,7 @@ def main():
                 else:
                     st.error("Mann-Whitney requer exatamente 2 grupos na coluna categórica.")
 
-            if st.button("Executar Kruskal-Wallis", key="kruskal_button"):
+            if st.button("Executar Kruskal-Wallis"):
                 stat, p = teste_kruskal(df, col_num, col_cat)
                 st.write(f"Kruskal-Wallis: Estatística={stat:.4f}, p-valor={p:.4f}")
                 if p < 0.05:
@@ -329,19 +413,20 @@ def main():
         # Perguntar se o usuário quer continuar para a próxima seção
         if st.button("Continuar para a próxima seção", key="continuar_8"):
             return
+
 # SEÇÃO 9: Two-Way ANOVA
     elif menu == "Two-Way ANOVA":
         st.subheader("Two-Way ANOVA")
-        file = st.file_uploader("Upload CSV para Two-Way ANOVA", type=["csv"], key="anova2_upload")
+        file = st.file_uploader("Upload CSV para Two-Way ANOVA", type=["csv"], key="anova2")
         if file:
             df = pd.read_csv(file)
             st.write("Exemplo de dados:")
             st.dataframe(df.head())
-            col_num = st.selectbox("Coluna Numérica", [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])], key="coluna_num_anova")
-            cat1 = st.selectbox("Fator 1", [c for c in df.columns if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])], key="fator1_anova")
-            cat2 = st.selectbox("Fator 2", [c for c in df.columns if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])], key="fator2_anova")
+            col_num = st.selectbox("Coluna Numérica", [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])])
+            cat1 = st.selectbox("Fator 1", [c for c in df.columns if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])])
+            cat2 = st.selectbox("Fator 2", [c for c in df.columns if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])])
 
-            if st.button("Executar Two-Way ANOVA", key="anova_button"):
+            if st.button("Executar Two-Way ANOVA"):
                 anova_table = anova_two_way(df, col_num, cat1, cat2)
                 if anova_table is not None:
                     st.write(anova_table)
@@ -354,19 +439,68 @@ def main():
         if st.button("Continuar para a próxima seção", key="continuar_9"):
             return
 
+# Continuar com as seções de regressões, teste de hipótese, correlação, etc.
+# Funções para regressão, teste de hipótese, correlação, Q-Estatística e Q-Exponencial
+
+# Função para a regressão linear
+def regressao_linear(df, formula):
+    model = sm.OLS.from_formula(formula, df).fit()
+    return model.summary()
+
+# Função para a regressão logística
+def regressao_logistica(df, formula):
+    model = sm.Logit.from_formula(formula, df).fit()
+    return model.summary()
+
+# Função para o teste de hipótese (One-Sample t-test)
+def teste_hipotese(df, col_num, media_hipotetica):
+    t_stat, p_val = stats.ttest_1samp(df[col_num].dropna(), media_hipotetica)
+    return t_stat, p_val
+
+# Função para calcular a correlação de Pearson, Spearman e Kendall
+def calcular_correlacao(df, col_x, col_y):
+    corr_pearson, p_val_pearson = stats.pearsonr(df[col_x].dropna(), df[col_y].dropna())
+    corr_spearman, p_val_spearman = stats.spearmanr(df[col_x].dropna(), df[col_y].dropna())
+    corr_kendall, p_val_kendall = stats.kendalltau(df[col_x].dropna(), df[col_y].dropna())
+    
+    return {
+        'Pearson': (corr_pearson, p_val_pearson),
+        'Spearman': (corr_spearman, p_val_spearman),
+        'Kendall': (corr_kendall, p_val_kendall)
+    }
+
+# Função para o cálculo de Q de Cochrane (usado em meta-análises)
+def cochrane_q(effect, variance):
+    q = sum(effect ** 2 / variance)
+    p_val = stats.chi2.sf(q, len(effect) - 1)
+    return q, p_val
+
+# Função para ajuste da distribuição Q-Exponencial (Estatística de Tsallis)
+def fit_q_exponential(data):
+    from scipy.optimize import curve_fit
+    
+    # Definir a função de ajuste Q-Exponencial
+    def q_exp(x, lam, q):
+        return lam * np.exp(-x / q)
+    
+    # Ajuste com curve_fit
+    popt, _ = curve_fit(q_exp, data, np.ones_like(data))
+    lam_fit, q_fit = popt
+    return lam_fit, q_fit
+
 # SEÇÃO 10: Regressões
     elif menu == "Regressões":
         st.subheader("Regressões")
-        file = st.file_uploader("Upload CSV para regressões", type=["csv"], key="reg_upload")
+        file = st.file_uploader("Upload CSV para regressões", type=["csv"], key="reg")
         if file:
             df = pd.read_csv(file)
             st.write("Exemplo de dados:")
             st.dataframe(df.head())
             st.markdown("Informe a fórmula. Ex.: `VariavelDependente ~ VariavelIndependente1 + VariavelIndependente2`")
-            formula = st.text_input("Fórmula", value="", key="formula_input")
-            tipo_regressao = st.selectbox("Tipo de Regressão", ["Linear", "Logística"], key="tipo_regressao")
+            formula = st.text_input("Fórmula", value="")
+            tipo_regressao = st.selectbox("Tipo de Regressão", ["Linear", "Logística"])
 
-            if st.button("Executar Regressão", key="regressao_button"):
+            if st.button("Executar Regressão"):
                 if not formula:
                     st.warning("Insira uma fórmula para o modelo.")
                 else:
@@ -374,7 +508,7 @@ def main():
                         resultado = regressao_linear(df, formula)
                     else:
                         resultado = regressao_logistica(df, formula)
-                    st.text_area("Resultado da Regressão", resultado, height=300, key="resultado_regressao")
+                    st.text_area("Resultado da Regressão", resultado, height=300)
                     st.markdown(
                         "**Interpretação**: Observe coeficientes, p-valores e estatísticas de ajuste. "
                         "Na regressão linear, o R² indica quanto o modelo explica da variação da variável dependente. "
@@ -388,17 +522,17 @@ def main():
 # SEÇÃO 11: Teste de Hipótese (One-Sample t-test)
     elif menu == "Teste de Hipótese":
         st.subheader("Teste de Hipótese (One-Sample t-test)")
-        file = st.file_uploader("Upload CSV para teste de hipótese", type=["csv"], key="hipo_upload")
+        file = st.file_uploader("Upload CSV para teste de hipótese", type=["csv"], key="hipo")
         if file:
             df = pd.read_csv(file)
             st.dataframe(df.head())
             col_num = st.selectbox("Selecione a coluna numérica para teste", 
-                                   [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])], key="hipo_col_input")
-            media_hipotetica = st.number_input("Média hipotética (H0)", value=0.0, key="hipo_mean_input")
+                                   [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])], key="hipo_col")
+            media_hipotetica = st.number_input("Média hipotética (H0)", value=0.0, key="hipo_mean")
 
-            if st.button("Executar One-Sample t-test", key="hipo_button"):
+            if st.button("Executar One-Sample t-test"):
                 data_series = df[col_num].dropna()
-                t_stat, p_val = stats.ttest_1samp(data_series, popmean=media_hipotetica)
+                t_stat, p_val = teste_hipotese(df, col_num, media_hipotetica)
                 st.write(f"Estatística t: {t_stat:.4f}, p-valor: {p_val:.4f}")
                 if p_val < 0.05:
                     st.success("Rejeitamos H0 ao nível de 5%.")
@@ -420,7 +554,7 @@ def main():
 # SEÇÃO 12: Testes de Correlação
     elif menu == "Testes de Correlação":
         st.subheader("Testes de Correlação (Pearson, Spearman, Kendall)")
-        file = st.file_uploader("Upload CSV para correlação", type=["csv"], key="corr_upload")
+        file = st.file_uploader("Upload CSV para correlação", type=["csv"], key="corr")
         if file:
             df = pd.read_csv(file)
             st.write("Exemplo de dados:")
@@ -429,26 +563,29 @@ def main():
             if len(colunas_num) < 2:
                 st.warning("O arquivo deve conter ao menos duas colunas numéricas.")
             else:
-                col_x = st.selectbox("Selecione a primeira variável (X)", colunas_num, key="corr_x_input")
-                col_y = st.selectbox("Selecione a segunda variável (Y)", colunas_num, key="corr_y_input")
+                col_x = st.selectbox("Selecione a primeira variável (X)", colunas_num, key="corr_x")
+                col_y = st.selectbox("Selecione a segunda variável (Y)", colunas_num, key="corr_y")
 
-                if st.button("Executar Pearson", key="pearson_button"):
-                    corr, p_val = stats.pearsonr(df[col_x].dropna(), df[col_y].dropna())
+                if st.button("Executar Pearson"):
+                    corr_result = calcular_correlacao(df, col_x, col_y)
+                    corr, p_val = corr_result['Pearson']
                     st.write(f"**Correlação de Pearson**: {corr:.4f}, p-valor={p_val:.4f}")
                     st.markdown(
                         "**Interpretação (Pearson)**: Mede correlação linear. p-valor < 0.05 indica relação linear significativa."
                     )
 
-                if st.button("Executar Spearman", key="spearman_button"):
-                    corr, p_val = stats.spearmanr(df[col_x].dropna(), df[col_y].dropna())
+                if st.button("Executar Spearman"):
+                    corr_result = calcular_correlacao(df, col_x, col_y)
+                    corr, p_val = corr_result['Spearman']
                     st.write(f"**Correlação de Spearman**: {corr:.4f}, p-valor={p_val:.4f}")
                     st.markdown(
                         "**Interpretação (Spearman)**: Mede correlação baseada em ranques. "
                         "p-valor < 0.05 indica correlação significativa."
                     )
 
-                if st.button("Executar Kendall", key="kendall_button"):
-                    corr, p_val = stats.kendalltau(df[col_x].dropna(), df[col_y].dropna())
+                if st.button("Executar Kendall"):
+                    corr_result = calcular_correlacao(df, col_x, col_y)
+                    corr, p_val = corr_result['Kendall']
                     st.write(f"**Correlação de Kendall**: {corr:.4f}, p-valor={p_val:.4f}")
                     st.markdown(
                         "**Interpretação (Kendall)**: Também ranque, mas abordagem diferente de Spearman. p-valor < 0.05 indica correlação significativa."
@@ -461,11 +598,11 @@ def main():
 # SEÇÃO 13: Q-Estatística (Cochrane's Q)
     elif menu == "Q-Estatística":
         st.subheader("Cálculo de Q-Estatística (Cochrane’s Q para meta-análise)")
-        file = st.file_uploader("Upload CSV com efeitos e variâncias", type=["csv"], key="qstat_upload")
+        file = st.file_uploader("Upload CSV com efeitos e variâncias", type=["csv"], key="qstat")
         if file:
             df = pd.read_csv(file)
             st.dataframe(df.head())
-            if st.button("Calcular Q", key="calcular_q_button"):
+            if st.button("Calcular Q"):
                 try:
                     Q, p_val = cochrane_q(df["effect"], df["variance"])
                     st.write(f"**Q de Cochrane**: {Q:.4f}")
@@ -488,14 +625,14 @@ def main():
 # SEÇÃO 14: Q-Exponencial
     elif menu == "Q-Exponencial":
         st.subheader("Ajuste Q-Exponencial (Estatística de Tsallis)")
-        file = st.file_uploader("Upload CSV com dados para ajuste", type=["csv"], key="qexp_upload")
+        file = st.file_uploader("Upload CSV com dados para ajuste", type=["csv"], key="qexp")
         if file:
             df = pd.read_csv(file)
             st.dataframe(df.head())
             col_num = st.selectbox("Selecione a coluna numérica", 
-                                   [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])], key="coluna_qexp")
+                                   [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])], key="qexp_col")
 
-            if st.button("Ajustar Q-Exponencial", key="ajustar_qexp_button"):
+            if st.button("Ajustar Q-Exponencial"):
                 data = df[col_num].dropna().values
                 try:
                     lam_fit, q_fit = fit_q_exponential(data)
@@ -508,8 +645,8 @@ def main():
                 except Exception as e:
                     st.error(f"Falha ao ajustar Q-Exponencial: {e}")
 
-        # Finalizar a análise
-        if st.button("Finalizar Análise", key="finalizar_qexp_button"):
+        # Perguntar se o usuário quer continuar para a próxima seção
+        if st.button("Finalizar Análise", key="finalizar_14"):
             return
 
 if __name__ == "__main__":
