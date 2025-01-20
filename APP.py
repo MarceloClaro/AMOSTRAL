@@ -6,6 +6,8 @@ from scipy import stats
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
 from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # ===================================================
 # 1) Dataset de Poços Artesianos (código e funções)
@@ -13,7 +15,7 @@ from scipy.optimize import curve_fit
 @st.cache_data
 def convert_df_to_csv(dataframe: pd.DataFrame):
     """
-    Converte um DataFrame para CSV em bytes (UTF-8), 
+    Converte um DataFrame para CSV em bytes (UTF-8),
     permitindo o uso no st.download_button.
     """
     return dataframe.to_csv(index=False).encode('utf-8')
@@ -23,7 +25,7 @@ def create_well_dataset():
     Retorna um DataFrame fictício com dados de poços artesianos.
     """
     data = {
-        "Well_ID": ["Well_001", "Well_002", "Well_003", "Well_004", "Well_005", 
+        "Well_ID": ["Well_001", "Well_002", "Well_003", "Well_004", "Well_005",
                     "Well_006", "Well_007", "Well_008", "Well_009", "Well_010"],
         "Flow_m3_per_h": [120, 95, 150, 80, 110, 130, 105, 90, 115, 100],
         "Salinity_ppm": [350, 420, 290, 500, 375, 410, 330, 460, 360, 395],
@@ -32,13 +34,13 @@ def create_well_dataset():
         "Magnesium_mg_per_L": [75, 65, 80, 70, 78, 82, 76, 69, 80, 77],
         "Sulfate_mg_per_L": [80, 100, 70, 90, 85, 95, 75, 88, 82, 89],
         "Chloride_mg_per_L": [120, 140, 110, 130, 125, 135, 115, 128, 122, 119],
-        "Geological_Formation": ["Granite", "Shale", "Limestone", "Sandstone", "Granite", 
+        "Geological_Formation": ["Granite", "Shale", "Limestone", "Sandstone", "Granite",
                                  "Shale", "Limestone", "Sandstone", "Granite", "Shale"],
-        "Climate_Type": ["Temperate", "Arid", "Subtropical", "Continental", "Temperate", 
+        "Climate_Type": ["Temperate", "Arid", "Subtropical", "Continental", "Temperate",
                          "Arid", "Subtropical", "Continental", "Temperate", "Arid"],
-        "Latitude": [40.7128, 34.0522, 29.7604, 41.8781, 39.9526, 
+        "Latitude": [40.7128, 34.0522, 29.7604, 41.8781, 39.9526,
                      34.0522, 29.7604, 41.8781, 40.7128, 34.0522],
-        "Longitude": [-74.0060, -118.2437, -95.3698, -87.6298, -75.1652, 
+        "Longitude": [-74.0060, -118.2437, -95.3698, -87.6298, -75.1652,
                       -118.2437, -95.3698, -87.6298, -74.0060, -118.2437],
         "Depth_m": [250, 300, 210, 275, 240, 320, 230, 290, 260, 310]
     }
@@ -130,14 +132,6 @@ def teste_kruskal(data: pd.DataFrame, col_numerica: str, col_categ: str):
 # 7) Two-Way ANOVA
 # ===================================================
 def anova_two_way(data: pd.DataFrame, col_numerica: str, cat1: str, cat2: str):
-    """
-    Realiza Two-Way ANOVA considerando col_numerica como variável dependente
-    e cat1, cat2 como fatores (categóricos).
-    
-    Retorna a tabela ANOVA se não houver problemas com Inf/NaN.
-    Caso contrário, avisa o usuário sobre dados ausentes ou inválidos.
-    """
-    # Remove linhas com NaN ou Inf
     data_clean = data[[col_numerica, cat1, cat2]].replace([np.inf, -np.inf], np.nan).dropna()
     if data_clean.empty:
         st.error("Todos os dados são NaN ou Inf. Verifique seu dataset.")
@@ -156,10 +150,6 @@ def anova_two_way(data: pd.DataFrame, col_numerica: str, cat1: str, cat2: str):
 # 8) Regressões
 # ===================================================
 def regressao_linear(data: pd.DataFrame, formula: str):
-    """
-    Regressão linear usando statsmodels. 
-    Remove valores Inf/NaN antes de ajustar o modelo.
-    """
     data_clean = data.replace([np.inf, -np.inf], np.nan).dropna()
     if data_clean.empty:
         return "Erro: dados inválidos (NaN/Inf). Verifique limpeza dos dados."
@@ -170,10 +160,6 @@ def regressao_linear(data: pd.DataFrame, formula: str):
         return f"Erro na regressão linear: {e}"
 
 def regressao_logistica(data: pd.DataFrame, formula: str):
-    """
-    Regressão logística usando statsmodels. 
-    Remove valores Inf/NaN antes de ajustar o modelo.
-    """
     import statsmodels.formula.api as smf
     data_clean = data.replace([np.inf, -np.inf], np.nan).dropna()
     if data_clean.empty:
@@ -202,10 +188,6 @@ def q_exponential_pdf(x, lam, q):
     return (2 - q) * lam * np.power((1 - (1-q)*lam*x), 1/(1-q))
 
 def fit_q_exponential(data):
-    """
-    Ajusta distribuição q-exponencial usando curve_fit, 
-    removendo Inf/NaN antes de estimar parâmetros.
-    """
     data_clean = data[~np.isnan(data) & ~np.isinf(data)]
     if len(data_clean) == 0:
         raise ValueError("Dados inválidos: somente valores Inf/NaN encontrados.")
@@ -247,13 +229,11 @@ def main():
     # =========================================================
     if menu == "Dataset de Poços Artesianos":
         st.subheader("Dataset de Poços Artesianos")
-        st.write("Este é um dataset fictício de poços artesianos com informações sobre vazão, salinidade, composição química, clima local e profundidade.")
+        st.write("Este é um dataset fictício de poços artesianos...")
 
-        # Exibir o DataFrame
         st.write("Pré-visualização dos dados:")
         st.dataframe(df_wells)
 
-        # Botão para download do arquivo CSV
         csv_bytes = convert_df_to_csv(df_wells)
         st.download_button(
             label="Baixar Dataset como CSV",
@@ -264,15 +244,59 @@ def main():
 
         st.markdown("""
         **Interpretação**:
-        - Este dataset possui colunas numéricas (Flow, Salinity, pH, etc.) e colunas categóricas (Geological_Formation, Climate_Type).
-        - Caso seu dataset real tenha valores ausentes (NaN) ou infinitos (Inf), considere limpar ou tratar esses dados antes das análises.
+        - Dataset contendo colunas numéricas e categóricas.
+        - Trate valores ausentes (NaN) ou Inf caso existam no seu dataset real.
         """)
+
+    # =========================================================
+    # GRÁFICO DE FUNÇÃO AUXILIAR
+    # =========================================================
+    def plot_histogram(data_series, titulo="Histograma", x_label="Valores", bins=10):
+        """
+        Exibe um histograma com título, rótulo de eixo X e 
+        bins personalizáveis.
+        """
+        plt.figure(figsize=(6,4))
+        plt.hist(data_series, bins=bins, alpha=0.7, color="cadetblue", edgecolor="black")
+        plt.title(titulo)
+        plt.xlabel(x_label)
+        plt.ylabel("Frequência")
+        st.pyplot(plt.gcf())
+        plt.close()
+
+    def plot_boxplot(data: pd.DataFrame, col_numerica: str, col_categ: str, titulo: str):
+        """
+        Exibe um boxplot de col_numerica separado por grupos col_categ.
+        """
+        plt.figure(figsize=(6,4))
+        sns.boxplot(x=col_categ, y=col_numerica, data=data, palette="Set2")
+        plt.title(titulo)
+        plt.xlabel(col_categ)
+        plt.ylabel(col_numerica)
+        st.pyplot(plt.gcf())
+        plt.close()
+
+    def plot_scatter(x, y, x_label="X", y_label="Y", titulo="Gráfico de Dispersão"):
+        """
+        Exibe um scatter plot de x vs y.
+        """
+        plt.figure(figsize=(6,4))
+        plt.scatter(x, y, alpha=0.7, color="teal", edgecolors="black")
+        plt.title(titulo)
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
+        st.pyplot(plt.gcf())
+        plt.close()
 
     # =========================================================
     # SEÇÃO 2: Cálculo de Amostragem - Proporção
     # =========================================================
     elif menu == "Cálculo de Amostragem - Proporção":
         st.subheader("Cálculo de Tamanho Amostral para Proporção")
+        # ... (cálculo permanece)
+        # Não é típico gerar gráfico aqui, pois é um cálculo pontual.
+        # Mas, poderíamos mostrar um gauge ou algo. Não implementado por padrão.
+
         populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000, step=1)
         nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
         margem_erro = st.slider("Margem de Erro (%)", 1, 50, 5, 1)
@@ -283,18 +307,18 @@ def main():
             if resultado:
                 st.success(f"Tamanho amostral recomendado: {resultado}")
                 st.markdown(
-                    f"**Interpretação**: Em uma população de {populacao} indivíduos, com nível de confiança de {nivel_confianca}% "
-                    f"e margem de erro de {margem_erro}%, assumindo que a proporção verdadeira seja de aproximadamente {p_est}, "
-                    f"são necessários {resultado} respondentes para obter resultados com a precisão desejada."
+                    f"**Interpretação**: Em uma população de {populacao} indivíduos..."
                 )
             else:
-                st.error("Erro no cálculo. Verifique os parâmetros informados (margem de erro não pode ser 0%).")
+                st.error("Erro no cálculo.")
 
     # =========================================================
     # SEÇÃO 3: Cálculo de Amostragem - Média
     # =========================================================
     elif menu == "Cálculo de Amostragem - Média":
         st.subheader("Cálculo de Tamanho Amostral para Média")
+        # (idem, sem gráfico por padrão)
+
         populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000, step=1)
         nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
         margem_erro_abs = st.number_input("Margem de Erro (valor absoluto)", min_value=0.001, value=5.0, step=0.1)
@@ -305,35 +329,32 @@ def main():
             if resultado:
                 st.success(f"Tamanho amostral recomendado: {resultado}")
                 st.markdown(
-                    f"**Interpretação**: Para uma população de {populacao} indivíduos, nível de confiança de {nivel_confianca}%, "
-                    f"margem de erro de ±{margem_erro_abs} e desvio-padrão de {desvio_padrao}, "
-                    f"uma amostra de {resultado} elementos ajuda a estimar a média com a precisão desejada."
+                    f"**Interpretação**: ... "
                 )
             else:
-                st.error("Erro no cálculo. Verifique se a margem de erro não é zero ou negativa.")
+                st.error("Erro no cálculo.")
 
     # =========================================================
     # SEÇÃO 4: Intervalo de Confiança - Proporção
     # =========================================================
     elif menu == "Intervalo de Confiança - Proporção":
         st.subheader("Cálculo de Intervalo de Confiança para Proporção")
+
         n = st.number_input("Tamanho da Amostra (n)", min_value=1, value=100, step=1)
         confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
         p_obs = st.number_input("Proporção Observada (0.0 a 1.0)", 0.0, 1.0, 0.5, 0.01)
-
+        
         if st.button("Calcular Intervalo"):
             ic = intervalo_confianca_proporcao(n, confianca, p_obs)
-            st.info(f"Intervalo de Confiança Aproximado: {ic[0]*100:.2f}% a {ic[1]*100:.2f}%")
-            st.markdown(
-                f"**Interpretação**: Se a proporção amostral é {p_obs*100:.2f}%, com {confianca}% de confiança, "
-                f"o valor real da proporção na população está entre {ic[0]*100:.2f}% e {ic[1]*100:.2f}%."
-            )
+            st.info(f"IC Aproximado: {ic[0]*100:.2f}% a {ic[1]*100:.2f}%")
+            st.markdown("**Interpretação**: ...")
 
     # =========================================================
     # SEÇÃO 5: Intervalo de Confiança - Média
     # =========================================================
     elif menu == "Intervalo de Confiança - Média":
         st.subheader("Cálculo de Intervalo de Confiança para Média")
+
         n = st.number_input("Tamanho da Amostra (n)", min_value=1, value=50, step=1)
         confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
         media_amostral = st.number_input("Média Observada", value=50.0, step=0.1)
@@ -341,342 +362,296 @@ def main():
 
         if st.button("Calcular Intervalo"):
             ic = intervalo_confianca_media(n, confianca, media_amostral, desvio_padrao)
-            st.info(f"Intervalo de Confiança Aproximado: {ic[0]:.2f} a {ic[1]:.2f}")
-            st.markdown(
-                f"**Interpretação**: Dada uma amostra de {n} itens, média {media_amostral} e desvio-padrão {desvio_padrao}, "
-                f"com {confianca}% de confiança, a média populacional deve situar-se entre {ic[0]:.2f} e {ic[1]:.2f}."
-            )
+            st.info(f"Intervalo de Confiança: {ic[0]:.2f} a {ic[1]:.2f}")
+            st.markdown("**Interpretação**: ...")
 
     # =========================================================
     # SEÇÃO 6: Estatísticas Descritivas
     # =========================================================
     elif menu == "Estatísticas Descritivas":
         st.subheader("Estatísticas Descritivas")
-        st.markdown("""
-            **Dica**: Se houver valores ausentes ou infinitos no seu dataset, 
-            considere removê-los ou tratá-los antes de gerar estatísticas confiáveis.
-        """)
-        file = st.file_uploader("Faça upload de um arquivo CSV", type=["csv"], key="desc")
+        file = st.file_uploader("Upload de CSV", type=["csv"], key="desc")
+
         if file:
             df = pd.read_csv(file)
+            df = df.replace([np.inf, -np.inf], np.nan)
             st.write("Exemplo de dados:")
             st.dataframe(df.head())
-            colunas_num = st.multiselect(
-                "Selecione colunas numéricas (ex.: valores contínuos ou inteiros)",
-                df.columns.tolist(),
-                default=[c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-            )
+            colunas_num = st.multiselect("Colunas numéricas", [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])])
+
             if colunas_num:
-                desc = estatisticas_descritivas(df[colunas_num].replace([np.inf, -np.inf], np.nan).dropna())
+                desc = estatisticas_descritivas(df[colunas_num].dropna())
                 st.write(desc)
-                st.markdown(
-                    "**Interpretação**: As métricas incluem média, desvio padrão, valor mínimo, valor máximo e quartis. "
-                    "Verifique se a quantidade de linhas após remover NaN/Inf é suficiente para uma análise robusta."
-                )
+
+                # Opção para plotar histogramas
+                if st.checkbox("Exibir Histogramas das colunas selecionadas?"):
+                    for c in colunas_num:
+                        data_series = df[c].dropna()
+                        if len(data_series) > 0:
+                            plot_histogram(data_series, titulo=f"Histograma de {c}", x_label=c, bins=10)
 
     # =========================================================
     # SEÇÃO 7: Testes de Normalidade
     # =========================================================
     elif menu == "Testes de Normalidade":
         st.subheader("Testes de Normalidade")
-        file = st.file_uploader("Upload CSV para testes de normalidade", type=["csv"], key="normal")
+        file = st.file_uploader("Upload CSV", type=["csv"], key="normal")
+
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
-            st.write("Exemplo de dados:")
-            st.dataframe(df.head())
-
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-            coluna = st.selectbox("Selecione a coluna numérica para teste de normalidade", colunas_num)
 
-            if st.button("Executar Shapiro-Wilk"):
+            if colunas_num:
+                coluna = st.selectbox("Selecione a coluna numérica", colunas_num)
                 data_series = df[coluna].dropna()
-                if data_series.empty:
-                    st.warning("Nenhum dado válido após remover NaN/Inf.")
-                else:
-                    stat, p = teste_shapiro(data_series)
-                    st.write(f"Shapiro-Wilk: Estatística={stat:.4f}, p-valor={p:.4f}")
-                    if p < 0.05:
-                        st.warning("Resultado sugere que a distribuição não é normal ao nível de 5%.")
-                    else:
-                        st.info("Não há evidência para rejeitar a normalidade ao nível de 5%.")
-                    st.markdown(
-                        "**Interpretação**: Um p-valor < 0.05 indica que seus dados não seguem uma distribuição normal."
-                    )
 
-            if st.button("Executar Kolmogorov-Smirnov"):
-                data_series = df[coluna].dropna()
-                if data_series.empty:
-                    st.warning("Nenhum dado válido após remover NaN/Inf.")
+                if len(data_series) == 0:
+                    st.warning("Coluna sem dados numéricos válidos após remoção de NaN/Inf.")
                 else:
-                    stat, p = teste_ks(data_series)
-                    st.write(f"K-S Test: Estatística={stat:.4f}, p-valor={p:.4f}")
-                    if p < 0.05:
-                        st.warning("Resultado sugere que a distribuição não é normal ao nível de 5%.")
-                    else:
-                        st.info("Não há evidência para rejeitar a normalidade ao nível de 5%.")
-                    st.markdown(
-                        "**Interpretação**: Um p-valor < 0.05 indica desvio significativo de uma distribuição normal."
-                    )
+                    if st.button("Executar Shapiro-Wilk"):
+                        stat, p = teste_shapiro(data_series)
+                        st.write(f"Shapiro-Wilk: Estatística={stat:.4f}, p-valor={p:.4f}")
+
+                    if st.button("Executar Kolmogorov-Smirnov"):
+                        stat, p = teste_ks(data_series)
+                        st.write(f"K-S: Estatística={stat:.4f}, p-valor={p:.4f}")
+
+                    # Plotar histograma e qqplot
+                    if st.checkbox("Exibir histograma e QQ-Plot"):
+                        plot_histogram(data_series, titulo=f"Histograma de {coluna}", x_label=coluna)
+                        
+                        # QQ-plot usando statsmodels
+                        fig = plt.figure(figsize=(6,4))
+                        sm.qqplot(data_series, line='s', alpha=0.7)
+                        plt.title(f"QQ-Plot de {coluna}")
+                        st.pyplot(fig)
+                        plt.close(fig)
 
     # =========================================================
     # SEÇÃO 8: Testes Não-Paramétricos
     # =========================================================
     elif menu == "Testes Não-Paramétricos":
         st.subheader("Testes Não-Paramétricos")
-        file = st.file_uploader("Upload CSV para testes não-paramétricos", type=["csv"], key="np")
+        file = st.file_uploader("Upload CSV", type=["csv"], key="np")
+
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
-            st.write("Exemplo de dados (após remoção de Inf):")
-            st.dataframe(df.head())
-
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
             colunas_cat = [c for c in df.columns if (df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c]))]
 
-            col_num = st.selectbox("Coluna Numérica (valor contínuo)", colunas_num)
-            col_cat = st.selectbox("Coluna Categórica (grupos)", colunas_cat)
+            if colunas_num and colunas_cat:
+                col_num = st.selectbox("Coluna Numérica", colunas_num)
+                col_cat = st.selectbox("Coluna Categórica", colunas_cat)
 
-            if st.button("Executar Mann-Whitney"):
-                data_f = df[[col_num, col_cat]].dropna()
-                stat, p = teste_mannwhitney(data_f, col_num, col_cat)
-                if stat is not None:
-                    st.write(f"Mann-Whitney: Estatística={stat:.4f}, p-valor={p:.4f}")
-                    if p < 0.05:
-                        st.success("Diferença significativa entre os dois grupos ao nível de 5%.")
-                    else:
-                        st.info("Não há diferença significativa entre os grupos ao nível de 5%.")
-                    st.markdown(
-                        "**Interpretação**: O teste Mann-Whitney avalia diferenças na distribuição/mediana entre 2 grupos."
-                    )
-                else:
-                    st.error("Verifique se há exatamente 2 grupos na coluna categórica selecionada.")
+                if st.button("Executar Mann-Whitney"):
+                    data_f = df[[col_num, col_cat]].dropna()
+                    stat, p = teste_mannwhitney(data_f, col_num, col_cat)
+                    if stat is not None:
+                        st.write(f"Mann-Whitney U: Estatística={stat:.4f}, p-valor={p:.4f}")
+                        if st.checkbox("Exibir Boxplot"):
+                            plot_boxplot(data_f, col_num, col_cat, titulo=f"Mann-Whitney: {col_num} vs {col_cat}")
 
-            if st.button("Executar Kruskal-Wallis"):
-                data_f = df[[col_num, col_cat]].dropna()
-                stat, p = teste_kruskal(data_f, col_num, col_cat)
-                st.write(f"Kruskal-Wallis: Estatística={stat:.4f}, p-valor={p:.4f}")
-                if p < 0.05:
-                    st.success("Diferença significativa entre os grupos ao nível de 5%.")
-                else:
-                    st.info("Não há diferença significativa entre os grupos ao nível de 5%.")
-                st.markdown(
-                    "**Interpretação**: O teste Kruskal-Wallis compara 3 ou mais grupos sem pressupor normalidade."
-                )
+                if st.button("Executar Kruskal-Wallis"):
+                    data_f = df[[col_num, col_cat]].dropna()
+                    stat, p = teste_kruskal(data_f, col_num, col_cat)
+                    st.write(f"Kruskal-Wallis: Estatística={stat:.4f}, p-valor={p:.4f}")
+                    if st.checkbox("Exibir Boxplot"):
+                        plot_boxplot(data_f, col_num, col_cat, titulo=f"Kruskal-Wallis: {col_num} vs {col_cat}")
 
     # =========================================================
     # SEÇÃO 9: Two-Way ANOVA
     # =========================================================
     elif menu == "Two-Way ANOVA":
         st.subheader("Two-Way ANOVA")
-        st.markdown("""
-            **Orientação**:
-            - Selecione uma coluna numérica como variável dependente.
-            - Selecione duas colunas categóricas (fatores), cada uma representando grupos/texto.
-            - Caso apareça erro de Inf/NaN, verifique se os dados possuem valores ausentes ou infinitos 
-              e considere limpá-los antes do teste.
-        """)
-        file = st.file_uploader("Upload CSV para Two-Way ANOVA", type=["csv"], key="anova2")
+        file = st.file_uploader("Upload CSV", type=["csv"], key="anova2")
+
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
-            st.write("Exemplo de dados (após remoção de Inf):")
-            st.dataframe(df.head())
-
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
             colunas_cat = [c for c in df.columns if (df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c]))]
 
-            col_num = st.selectbox("Coluna Numérica (dependente)", colunas_num)
-            cat1 = st.selectbox("Fator 1 (categórico)", colunas_cat)
-            cat2 = st.selectbox("Fator 2 (categórico)", colunas_cat)
+            if colunas_num and len(colunas_cat) >= 2:
+                col_num = st.selectbox("Coluna Numérica (dependente)", colunas_num)
+                cat1 = st.selectbox("Fator 1 (categórico)", colunas_cat)
+                cat2 = st.selectbox("Fator 2 (categórico)", colunas_cat)
 
-            if st.button("Executar Two-Way ANOVA"):
-                anova_table = anova_two_way(df, col_num, cat1, cat2)
-                if anova_table is not None:
-                    st.write(anova_table)
-                    st.markdown(
-                        "**Interpretação**: A Tabela ANOVA mostra se cada fator (cat1, cat2) e a interação deles "
-                        "afetam significativamente a variável numérica. p-valor < 0.05 indica efeito significativo."
-                    )
+                if st.button("Executar Two-Way ANOVA"):
+                    anova_table = anova_two_way(df, col_num, cat1, cat2)
+                    if anova_table is not None:
+                        st.write(anova_table)
+
+                        if st.checkbox("Exibir Boxplot (cat1)"):
+                            data_f = df[[col_num, cat1]].dropna()
+                            plot_boxplot(data_f, col_num, cat1, titulo=f"Boxplot de {col_num} por {cat1}")
+
+                        if st.checkbox("Exibir Boxplot (cat2)"):
+                            data_f = df[[col_num, cat2]].dropna()
+                            plot_boxplot(data_f, col_num, cat2, titulo=f"Boxplot de {col_num} por {cat2}")
 
     # =========================================================
     # SEÇÃO 10: Regressões
     # =========================================================
     elif menu == "Regressões":
         st.subheader("Regressões")
-        st.markdown("""
-            **Instruções**:
-            - Faça upload de um CSV.
-            - Para regressão linear, use fórmula do tipo `Y ~ X1 + X2`.
-            - Para regressão logística, as variáveis dependentes precisam ser 0 ou 1 (binária). 
-              Use fórmula como `Y ~ X1 + X2`.
-            - Caso seu dataset tenha NaN/Inf, eles serão removidos antes de ajustar o modelo.
-        """)
-        file = st.file_uploader("Upload CSV para regressões", type=["csv"], key="reg")
+        file = st.file_uploader("Upload CSV", type=["csv"], key="reg")
+
         if file:
             df = pd.read_csv(file)
-            st.write("Exemplo de dados (antes de remoção de Inf/NaN):")
-            st.dataframe(df.head())
-            formula = st.text_input("Fórmula (ex.: 'VariavelDependente ~ VariavelIndependente1 + C(VariavelCat)')", value="")
+            formula = st.text_input("Fórmula (ex.: 'Y ~ X + C(Grupo)')", value="")
             tipo_regressao = st.selectbox("Tipo de Regressão", ["Linear", "Logística"])
 
             if st.button("Executar Regressão"):
                 if not formula:
-                    st.warning("Insira uma fórmula válida para o modelo.")
+                    st.warning("Insira uma fórmula válida.")
                 else:
                     if tipo_regressao == "Linear":
                         resultado = regressao_linear(df, formula)
                     else:
                         resultado = regressao_logistica(df, formula)
+
                     st.text_area("Resultado da Regressão", resultado, height=300)
-                    st.markdown(
-                        "**Interpretação**: Verifique coeficientes, p-valores e estatísticas de ajuste. "
-                        "Na regressão linear, o R² indica proporção da variação explicada; "
-                        "na logística, observe p-valores dos coeficientes e odds-ratios."
-                    )
+
+            # Opcional: Se quisermos exibir um scatter plot para X e Y se houver apenas 1 preditora numérica
+            if st.checkbox("Exibir gráfico de Dispersão (somente se houver 1 var. numérica no lado direito da fórmula)"):
+                try:
+                    # Exemplo básico: extrair 'Y' e 'X' se a fórmula for do tipo "Y ~ X"
+                    lhs, rhs = formula.split("~")
+                    lhs = lhs.strip()
+                    rhs = rhs.strip()
+                    # Se tiver mais de uma var. no RHS, dificultaria, mas este é apenas exemplo
+                    if "+" not in rhs and "C(" not in rhs:
+                        x_vals = df[rhs].dropna()
+                        y_vals = df[lhs].dropna()
+                        plot_scatter(x_vals, y_vals, x_label=rhs, y_label=lhs, titulo="Dispersão para Regressão")
+                except Exception as e:
+                    st.warning(f"Não foi possível criar gráfico: {e}")
 
     # =========================================================
     # SEÇÃO 11: Teste de Hipótese (One-Sample t-test)
     # =========================================================
     elif menu == "Teste de Hipótese":
         st.subheader("Teste de Hipótese (One-Sample t-test)")
-        file = st.file_uploader("Upload CSV para teste de hipótese", type=["csv"], key="hipo")
+        file = st.file_uploader("Upload CSV", type=["csv"], key="hipo")
+
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
-            st.dataframe(df.head())
-
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-            col_num = st.selectbox("Selecione a coluna numérica para teste", colunas_num, key="hipo_col")
-            media_hipotetica = st.number_input("Média hipotética (H0)", value=0.0, key="hipo_mean")
+            col_num = st.selectbox("Coluna Numérica para teste", colunas_num)
+            media_hipotetica = st.number_input("Média hipotética (H0)", value=0.0)
 
             if st.button("Executar One-Sample t-test"):
                 data_series = df[col_num].dropna()
-                if data_series.empty:
-                    st.warning("Sem dados válidos após remover NaN/Inf.")
+                t_stat, p_val = stats.ttest_1samp(data_series, popmean=media_hipotetica)
+                st.write(f"Estatística t: {t_stat:.4f}, p-valor: {p_val:.4f}")
+
+                if p_val < 0.05:
+                    st.success("Rejeitamos H0 ao nível de 5%.")
                 else:
-                    t_stat, p_val = stats.ttest_1samp(data_series, popmean=media_hipotetica)
-                    st.write(f"Estatística t: {t_stat:.4f}, p-valor: {p_val:.4f}")
-                    if p_val < 0.05:
-                        st.success("Rejeitamos H0 ao nível de 5%.")
-                        st.markdown(
-                            "**Interpretação**: A média observada difere significativamente da média hipotética. "
-                            "p-valor < 0.05 sugere diferença estatística."
-                        )
-                    else:
-                        st.info("Não rejeitamos H0 ao nível de 5%.")
-                        st.markdown(
-                            "**Interpretação**: Não há evidência suficiente para concluir que a média difere de H0."
-                        )
+                    st.info("Não rejeitamos H0 ao nível de 5%.")
+
+                if st.checkbox("Exibir Histograma"):
+                    plot_histogram(data_series, titulo=f"Histograma da coluna {col_num}", x_label=col_num)
 
     # =========================================================
     # SEÇÃO 12: Testes de Correlação
     # =========================================================
     elif menu == "Testes de Correlação":
         st.subheader("Testes de Correlação (Pearson, Spearman, Kendall)")
-        file = st.file_uploader("Upload CSV para correlação", type=["csv"], key="corr")
+        file = st.file_uploader("Upload CSV", type=["csv"], key="corr")
+
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
-            st.write("Exemplo de dados:")
-            st.dataframe(df.head())
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
             if len(colunas_num) < 2:
-                st.warning("É necessário ao menos duas colunas numéricas para analisar correlação.")
+                st.warning("É necessário ao menos duas colunas numéricas.")
             else:
-                col_x = st.selectbox("Selecione a primeira variável (X)", colunas_num, key="corr_x")
-                col_y = st.selectbox("Selecione a segunda variável (Y)", colunas_num, key="corr_y")
+                col_x = st.selectbox("Var. X", colunas_num)
+                col_y = st.selectbox("Var. Y", colunas_num)
 
                 if st.button("Executar Pearson"):
-                    data_x = df[col_x].dropna()
-                    data_y = df[col_y].dropna()
-                    corr, p_val = stats.pearsonr(data_x, data_y)
-                    st.write(f"**Correlação de Pearson**: {corr:.4f}, p-valor={p_val:.4f}")
-                    st.markdown(
-                        "**Interpretação (Pearson)**: Mede correlação linear. p-valor < 0.05 indica relação linear significativa."
-                    )
+                    xvals = df[col_x].dropna()
+                    yvals = df[col_y].dropna()
+                    corr, p_val = stats.pearsonr(xvals, yvals)
+                    st.write(f"**Pearson**: r={corr:.4f}, p-valor={p_val:.4f}")
 
                 if st.button("Executar Spearman"):
-                    data_x = df[col_x].dropna()
-                    data_y = df[col_y].dropna()
-                    corr, p_val = stats.spearmanr(data_x, data_y)
-                    st.write(f"**Correlação de Spearman**: {corr:.4f}, p-valor={p_val:.4f}")
-                    st.markdown(
-                        "**Interpretação (Spearman)**: Mede correlação baseada em ranques. "
-                        "p-valor < 0.05 indica correlação monotônica significativa."
-                    )
+                    xvals = df[col_x].dropna()
+                    yvals = df[col_y].dropna()
+                    corr, p_val = stats.spearmanr(xvals, yvals)
+                    st.write(f"**Spearman**: r={corr:.4f}, p-valor={p_val:.4f}")
 
                 if st.button("Executar Kendall"):
-                    data_x = df[col_x].dropna()
-                    data_y = df[col_y].dropna()
-                    corr, p_val = stats.kendalltau(data_x, data_y)
-                    st.write(f"**Correlação de Kendall**: {corr:.4f}, p-valor={p_val:.4f}")
-                    st.markdown(
-                        "**Interpretação (Kendall)**: Também usa ranques, mas com abordagem diferente de Spearman. "
-                        "p-valor < 0.05 indica correlação significativa."
-                    )
+                    xvals = df[col_x].dropna()
+                    yvals = df[col_y].dropna()
+                    corr, p_val = stats.kendalltau(xvals, yvals)
+                    st.write(f"**Kendall**: tau={corr:.4f}, p-valor={p_val:.4f}")
+
+                if st.checkbox("Exibir Gráfico de Dispersão"):
+                    xvals = df[col_x].dropna()
+                    yvals = df[col_y].dropna()
+                    plot_scatter(xvals, yvals, x_label=col_x, y_label=col_y,
+                                 titulo=f"Dispersão entre {col_x} e {col_y}")
 
     # =========================================================
     # SEÇÃO 13: Q-Estatística (Cochrane's Q)
     # =========================================================
     elif menu == "Q-Estatística":
-        st.subheader("Cálculo de Q-Estatística (Cochrane’s Q para meta-análise)")
-        st.markdown("""
-            **Notas**:
-            - Verifique se existem colunas 'effect' e 'variance' no dataset.
-            - Remova valores ausentes ou infinitos antes de prosseguir, se necessário.
-        """)
-        file = st.file_uploader("Upload CSV com efeitos e variâncias", type=["csv"], key="qstat")
+        st.subheader("Cálculo de Q-Estatística (Cochrane’s Q)")
+        file = st.file_uploader("Upload CSV", type=["csv"], key="qstat")
+
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
-            st.dataframe(df.head())
             if st.button("Calcular Q"):
                 try:
                     effects = df["effect"].dropna()
                     variances = df["variance"].dropna()
                     Q, p_val = cochrane_q(effects, variances)
-                    st.write(f"**Q de Cochrane**: {Q:.4f}")
-                    st.write(f"**p-valor de heterogeneidade**: {p_val:.4f}")
-                    if p_val < 0.05:
-                        st.warning("Há heterogeneidade significativa entre os estudos.")
-                    else:
-                        st.info("Não há evidências de heterogeneidade significativa.")
-                    st.markdown(
-                        "**Interpretação**: p-valor < 0.05 indica que os estudos não são homogêneos, "
-                        "ou seja, há variação significativa entre eles (heterogeneidade)."
-                    )
+                    st.write(f"Q de Cochrane: {Q:.4f}, p-valor={p_val:.4f}")
                 except KeyError:
-                    st.error("Certifique-se de que as colunas se chamam exatamente 'effect' e 'variance'.")
+                    st.error("Colunas 'effect' e 'variance' não encontradas.")
                 except Exception as e:
-                    st.error(f"Erro: {e}. Verifique se os dados contêm valores inválidos ou ausentes.")
+                    st.error(f"Erro: {e}.")
 
     # =========================================================
     # SEÇÃO 14: Q-Exponencial
     # =========================================================
     elif menu == "Q-Exponencial":
-        st.subheader("Ajuste Q-Exponencial (Estatística de Tsallis)")
-        st.markdown("""
-            **Instruções**:
-            1. Faça upload de um CSV com ao menos uma coluna numérica, sem valores inválidos (NaN/Inf).
-            2. Selecione a coluna que deseja ajustar a uma distribuição q-exponencial.
-        """)
-        file = st.file_uploader("Upload CSV com dados para ajuste", type=["csv"], key="qexp")
+        st.subheader("Ajuste Q-Exponencial (Tsallis)")
+        file = st.file_uploader("Upload CSV", type=["csv"], key="qexp")
+
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
-            st.dataframe(df.head())
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-            col_num = st.selectbox("Selecione a coluna numérica", colunas_num, key="qexp_col")
 
-            if st.button("Ajustar Q-Exponencial"):
-                data_clean = df[col_num].dropna().values
-                if len(data_clean) == 0:
-                    st.error("A coluna selecionada não possui dados numéricos válidos (após remover NaN/Inf).")
-                else:
-                    try:
-                        lam_fit, q_fit = fit_q_exponential(data_clean)
-                        st.write(f"**Parâmetros ajustados**: λ = {lam_fit:.4f}, q = {q_fit:.4f}")
-                        st.markdown(
-                            "**Interpretação**: A q-exponencial (Tsallis) é uma generalização da exponencial. "
-                            "Se q ≈ 1, o modelo é quase exponencial. Se q se afasta de 1, o sistema apresenta "
-                            "características não-extensivas."
-                        )
-                    except Exception as e:
-                        st.error(f"Falha ao ajustar Q-Exponencial: {e}")
+            if colunas_num:
+                col_num = st.selectbox("Coluna Numérica", colunas_num)
+                if st.button("Ajustar Q-Exponencial"):
+                    data_clean = df[col_num].dropna().values
+                    if len(data_clean) == 0:
+                        st.error("Sem dados válidos após remover NaN/Inf.")
+                    else:
+                        try:
+                            lam_fit, q_fit = fit_q_exponential(data_clean)
+                            st.write(f"Parâmetros ajustados: λ={lam_fit:.4f}, q={q_fit:.4f}")
+
+                            # Plotar histograma + curva ajustada
+                            counts, bins = np.histogram(data_clean, bins=30, density=True)
+                            xvals = 0.5*(bins[1:]+bins[:-1])
+                            plt.figure(figsize=(6,4))
+                            plt.hist(data_clean, bins=30, density=True, alpha=0.5, color="grey", edgecolor="black", label="Dados")
+                            # Gerar curva
+                            x_smooth = np.linspace(xvals.min(), xvals.max(), 200)
+                            y_smooth = q_exponential_pdf(x_smooth, lam_fit, q_fit)
+                            plt.plot(x_smooth, y_smooth, 'r-', label="Curva q-exponencial ajustada")
+                            plt.title("Ajuste Q-Exponencial")
+                            plt.xlabel(col_num)
+                            plt.ylabel("Densidade")
+                            plt.legend()
+                            st.pyplot(plt.gcf())
+                            plt.close()
+
+                        except Exception as e:
+                            st.error(f"Falha no ajuste: {e}")
 
 if __name__ == "__main__":
     main()
