@@ -7,9 +7,46 @@ import statsmodels.api as sm
 from statsmodels.formula.api import ols
 from scipy.optimize import curve_fit
 
-# ---------------------------------------------------
-# Funções de Cálculo de Tamanho Amostral
-# ---------------------------------------------------
+# ===================================================
+# 1) Dataset de Poços Artesianos (código e funções)
+# ===================================================
+@st.cache_data
+def convert_df_to_csv(dataframe: pd.DataFrame):
+    """
+    Converte um DataFrame para CSV em bytes (UTF-8), 
+    permitindo o uso no st.download_button.
+    """
+    return dataframe.to_csv(index=False).encode('utf-8')
+
+def create_well_dataset():
+    """
+    Retorna um DataFrame fictício com dados de poços artesianos.
+    """
+    data = {
+        "Well_ID": ["Well_001", "Well_002", "Well_003", "Well_004", "Well_005", 
+                    "Well_006", "Well_007", "Well_008", "Well_009", "Well_010"],
+        "Flow_m3_per_h": [120, 95, 150, 80, 110, 130, 105, 90, 115, 100],
+        "Salinity_ppm": [350, 420, 290, 500, 375, 410, 330, 460, 360, 395],
+        "pH": [7.2, 6.8, 7.4, 7.0, 7.1, 6.9, 7.3, 6.7, 7.0, 7.2],
+        "Calcium_mg_per_L": [150, 180, 130, 160, 155, 170, 140, 165, 150, 158],
+        "Magnesium_mg_per_L": [75, 65, 80, 70, 78, 82, 76, 69, 80, 77],
+        "Sulfate_mg_per_L": [80, 100, 70, 90, 85, 95, 75, 88, 82, 89],
+        "Chloride_mg_per_L": [120, 140, 110, 130, 125, 135, 115, 128, 122, 119],
+        "Geological_Formation": ["Granite", "Shale", "Limestone", "Sandstone", "Granite", 
+                                 "Shale", "Limestone", "Sandstone", "Granite", "Shale"],
+        "Climate_Type": ["Temperate", "Arid", "Subtropical", "Continental", "Temperate", 
+                         "Arid", "Subtropical", "Continental", "Temperate", "Arid"],
+        "Latitude": [40.7128, 34.0522, 29.7604, 41.8781, 39.9526, 
+                     34.0522, 29.7604, 41.8781, 40.7128, 34.0522],
+        "Longitude": [-74.0060, -118.2437, -95.3698, -87.6298, -75.1652, 
+                      -118.2437, -95.3698, -87.6298, -74.0060, -118.2437],
+        "Depth_m": [250, 300, 210, 275, 240, 320, 230, 290, 260, 310]
+    }
+    return pd.DataFrame(data)
+
+# ===================================================
+# 2) Funções de Cálculo de Tamanho Amostral
+# ===================================================
 def obter_z(conf):
     if conf <= 80:
         return 1.28
@@ -41,9 +78,9 @@ def tamanho_amostral_media(populacao, nivel_confianca, margem_erro, desvio_padra
     n_ajustado = n0 / (1 + (n0 - 1) / populacao)
     return math.ceil(n_ajustado)
 
-# ---------------------------------------------------
-# Funções para Intervalo de Confiança
-# ---------------------------------------------------
+# ===================================================
+# 3) Funções para Intervalo de Confiança
+# ===================================================
 def intervalo_confianca_proporcao(n, confianca, p_observado):
     Z = obter_z(confianca)
     erro_padrao = math.sqrt(p_observado * (1 - p_observado) / n)
@@ -56,15 +93,15 @@ def intervalo_confianca_media(n, confianca, media_amostral, desvio_padrao):
     margem = Z * erro_padrao
     return (media_amostral - margem, media_amostral + margem)
 
-# ---------------------------------------------------
-# Estatísticas Descritivas
-# ---------------------------------------------------
+# ===================================================
+# 4) Estatísticas Descritivas
+# ===================================================
 def estatisticas_descritivas(data: pd.DataFrame):
     return data.describe()
 
-# ---------------------------------------------------
-# Testes de Normalidade
-# ---------------------------------------------------
+# ===================================================
+# 5) Testes de Normalidade
+# ===================================================
 def teste_shapiro(data_series):
     return stats.shapiro(data_series.dropna())
 
@@ -74,9 +111,9 @@ def teste_ks(data_series):
     std = cleaned.std()
     return stats.kstest(cleaned, 'norm', args=(mean, std))
 
-# ---------------------------------------------------
-# Testes Não-Paramétricos
-# ---------------------------------------------------
+# ===================================================
+# 6) Testes Não-Paramétricos
+# ===================================================
 def teste_mannwhitney(data: pd.DataFrame, col_numerica: str, col_categ: str):
     grupos = data[col_categ].unique()
     if len(grupos) != 2:
@@ -89,9 +126,9 @@ def teste_kruskal(data: pd.DataFrame, col_numerica: str, col_categ: str):
     grupos = [group[col_numerica].dropna() for name, group in data.groupby(col_categ)]
     return stats.kruskal(*grupos)
 
-# ---------------------------------------------------
-# Two-Way ANOVA
-# ---------------------------------------------------
+# ===================================================
+# 7) Two-Way ANOVA
+# ===================================================
 def anova_two_way(data: pd.DataFrame, col_numerica: str, cat1: str, cat2: str):
     formula = f"{col_numerica} ~ C({cat1}) + C({cat2}) + C({cat1}):C({cat2})"
     try:
@@ -102,9 +139,9 @@ def anova_two_way(data: pd.DataFrame, col_numerica: str, cat1: str, cat2: str):
         st.error(f"Erro no Two-Way ANOVA: {e}")
         return None
 
-# ---------------------------------------------------
-# Regressões
-# ---------------------------------------------------
+# ===================================================
+# 8) Regressões
+# ===================================================
 def regressao_linear(data: pd.DataFrame, formula: str):
     try:
         modelo = ols(formula, data=data).fit()
@@ -120,9 +157,9 @@ def regressao_logistica(data: pd.DataFrame, formula: str):
     except Exception as e:
         return f"Erro na regressão logística: {e}"
 
-# ---------------------------------------------------
-# Q-Estatística (Cochrane's Q)
-# ---------------------------------------------------
+# ===================================================
+# 9) Q-Estatística (Cochrane's Q)
+# ===================================================
 def cochrane_q(effects, variances):
     w = 1.0 / np.array(variances)
     theta_fixed = np.sum(w * effects) / np.sum(w)
@@ -131,11 +168,10 @@ def cochrane_q(effects, variances):
     p_val = 1 - stats.chi2.cdf(Q, df)
     return Q, p_val
 
-# ---------------------------------------------------
-# Q-Exponencial (Ajuste simplificado)
-# ---------------------------------------------------
+# ===================================================
+# 10) Q-Exponencial (Ajuste simplificado)
+# ===================================================
 def q_exponential_pdf(x, lam, q):
-    # Função PDF q-exponencial simplificada.
     return (2 - q) * lam * np.power((1 - (1-q)*lam*x), 1/(1-q))
 
 def fit_q_exponential(data):
@@ -146,14 +182,17 @@ def fit_q_exponential(data):
     popt, _ = curve_fit(q_exponential_pdf, xvals, yvals, p0=initial_guess, maxfev=10000)
     return popt  # lam, q
 
-# ---------------------------------------------------
-# INTERFACE STREAMLIT
-# ---------------------------------------------------
+# ===================================================
+# 11) INTERFACE STREAMLIT (main)
+# ===================================================
 def main():
     st.title("Ferramenta Avançada de Estatística e Cálculo Amostral")
 
+    # Criação do dataset de poços artesianos para exibição e download
+    df_wells = create_well_dataset()
+
     menu = st.sidebar.radio("Menu", [
-        "Home",
+        "Dataset de Poços Artesianos",
         "Cálculo de Amostragem - Proporção",
         "Cálculo de Amostragem - Média",
         "Intervalo de Confiança - Proporção",
@@ -169,62 +208,37 @@ def main():
         "Q-Exponencial"
     ])
 
-    # ---------------------------------------
-    # HOME: Descrição detalhada
-    # ---------------------------------------
-    if menu == "Home":
-        st.subheader("Bem-vindo(a)!")
+    # =========================================================
+    # SEÇÃO 1: Dataset de Poços Artesianos
+    # =========================================================
+    if menu == "Dataset de Poços Artesianos":
+        st.subheader("Dataset de Poços Artesianos")
+        st.write("Este é um dataset fictício de poços artesianos com informações sobre vazão, salinidade, composição química, clima local e profundidade.")
+
+        # Exibir o DataFrame
+        st.write("Pré-visualização dos dados:")
+        st.dataframe(df_wells)
+
+        # Botão para download do arquivo CSV
+        csv_bytes = convert_df_to_csv(df_wells)
+        st.download_button(
+            label="Baixar Dataset como CSV",
+            data=csv_bytes,
+            file_name="pocos_artesianos.csv",
+            mime="text/csv",
+        )
+
         st.markdown("""
-        Este aplicativo oferece diversas ferramentas estatísticas avançadas:
-        
-        **1. Cálculo de Amostragem - Proporção**  
-        Estima o tamanho de amostra necessário para obter uma **proporção** (por ex. % de respondentes que aprovam algo) 
-        com uma dada margem de erro e nível de confiança.
-
-        **2. Cálculo de Amostragem - Média**  
-        Estima o tamanho de amostra necessário para estimar uma **média** (por exemplo, tempo médio, rendimento médio etc.) 
-        com precisão desejada.
-
-        **3. Intervalo de Confiança - Proporção / Média**  
-        Calcula intervalos de confiança para **proporções** e **médias**, com base na informação da amostra.  
-        Útil para entender a faixa provável (dentro de um nível de confiança) em que se situa o valor populacional verdadeiro.
-
-        **4. Estatísticas Descritivas**  
-        Fornece estatísticas básicas (média, mediana, mínimos, máximos, quartis, etc.) para um conjunto de dados numéricos.
-
-        **5. Testes de Normalidade**  
-        Permite verificar se uma variável segue distribuição normal (testes de Shapiro-Wilk e Kolmogorov-Smirnov).
-
-        **6. Testes Não-Paramétricos**  
-        Inclui Mann-Whitney (comparação de 2 grupos) e Kruskal-Wallis (comparação de vários grupos) 
-        sem assumir normalidade dos dados.
-
-        **7. Two-Way ANOVA**  
-        Analisa variações entre grupos considerando dois fatores diferentes ao mesmo tempo 
-        (por exemplo, efeito de 2 variáveis categóricas em uma variável numérica).
-
-        **8. Regressões (Linear e Logística)**  
-        Permite criar modelos de regressão linear ou logística a partir de uma fórmula especificada pelo usuário.
-
-        **9. Teste de Hipótese**  
-        Realiza um teste t de uma amostra (one-sample t-test), verificando se a média amostral difere de um valor hipotético definido.
-
-        **10. Testes de Correlação**  
-        Avalia a correlação entre duas variáveis numéricas (Pearson, Spearman, Kendall).
-
-        **11. Q-Estatística**  
-        Calcula o Cochrane’s Q, usado geralmente em meta-análise para avaliar a heterogeneidade entre estudos.
-
-        **12. Q-Exponencial**  
-        Ajusta uma distribuição q-exponencial (estatística de Tsallis) a dados numéricos, estimando seus parâmetros.
-
-        Selecione um item no menu à esquerda para começar.
+        **Interpretação**:
+        - O dataset inclui colunas de **Flow**, **Salinity**, **pH**, íons (Calcium, Magnesium, Sulfate, Chloride),
+          bem como **informações geológicas** (Geological_Formation), **climáticas** (Climate_Type) e **geográficas** (Latitude, Longitude).
+        - Isso pode servir como teste para análises exploratórias, regressões ou qualquer método estatístico desejado.
         """)
 
-    # ---------------------------------------
-    # Cálculo de Amostragem - Proporção
-    # ---------------------------------------
-    if menu == "Cálculo de Amostragem - Proporção":
+    # =========================================================
+    # SEÇÃO 2: Cálculo de Amostragem - Proporção
+    # =========================================================
+    elif menu == "Cálculo de Amostragem - Proporção":
         st.subheader("Cálculo de Tamanho Amostral para Proporção")
         populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000, step=1)
         nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
@@ -237,16 +251,16 @@ def main():
                 st.success(f"Tamanho amostral recomendado: {resultado}")
                 st.markdown(
                     f"**Interpretação**: Para uma população de {populacao} indivíduos, com nível de confiança de {nivel_confianca}% "
-                    f"e margem de erro de {margem_erro}%, assumindo que a proporção verdadeira gire em torno de {p_est}, "
-                    f"o número de {resultado} respondentes na amostra é indicado para obter estimativas confiáveis da proporção."
+                    f"e margem de erro de {margem_erro}%, assumindo proporção verdadeira por volta de {p_est}, "
+                    f"o tamanho de amostra recomendado é {resultado} para alcançar a precisão desejada."
                 )
             else:
                 st.error("Erro no cálculo. Verifique os parâmetros informados.")
 
-    # ---------------------------------------
-    # Cálculo de Amostragem - Média
-    # ---------------------------------------
-    if menu == "Cálculo de Amostragem - Média":
+    # =========================================================
+    # SEÇÃO 3: Cálculo de Amostragem - Média
+    # =========================================================
+    elif menu == "Cálculo de Amostragem - Média":
         st.subheader("Cálculo de Tamanho Amostral para Média")
         populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000, step=1)
         nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
@@ -258,17 +272,17 @@ def main():
             if resultado:
                 st.success(f"Tamanho amostral recomendado: {resultado}")
                 st.markdown(
-                    f"**Interpretação**: Para uma população de {populacao} indivíduos, com nível de confiança de {nivel_confianca}%, "
-                    f"margem de erro de ±{margem_erro_abs} na média estimada e desvio-padrão populacional estimado em {desvio_padrao}, "
-                    f"são necessários {resultado} respondentes para atingir a precisão desejada na estimativa da média."
+                    f"**Interpretação**: Para uma população de {populacao} indivíduos, nível de confiança de {nivel_confianca}%, "
+                    f"margem de erro de ±{margem_erro_abs} e desvio-padrão de {desvio_padrao}, "
+                    f"uma amostra de {resultado} elementos é indicada para estimar a média com a precisão desejada."
                 )
             else:
                 st.error("Erro no cálculo. Verifique os parâmetros informados.")
 
-    # ---------------------------------------
-    # Intervalo de Confiança - Proporção
-    # ---------------------------------------
-    if menu == "Intervalo de Confiança - Proporção":
+    # =========================================================
+    # SEÇÃO 4: Intervalo de Confiança - Proporção
+    # =========================================================
+    elif menu == "Intervalo de Confiança - Proporção":
         st.subheader("Cálculo de Intervalo de Confiança para Proporção")
         n = st.number_input("Tamanho da Amostra (n)", min_value=1, value=100, step=1)
         confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
@@ -278,15 +292,14 @@ def main():
             ic = intervalo_confianca_proporcao(n, confianca, p_obs)
             st.info(f"Intervalo de Confiança Aproximado: {ic[0]*100:.2f}% a {ic[1]*100:.2f}%")
             st.markdown(
-                f"**Interpretação**: Supondo que a proporção amostral seja {p_obs*100:.2f}%, com tamanho de amostra n={n} e "
-                f"{confianca}% de confiança, o intervalo de {ic[0]*100:.2f}% a {ic[1]*100:.2f}% sugere a faixa provável onde está "
-                f"a proporção populacional real."
+                f"**Interpretação**: Com {confianca}% de confiança, se a proporção amostral for {p_obs*100:.2f}%, "
+                f"o valor real da proporção populacional deve estar entre {ic[0]*100:.2f}% e {ic[1]*100:.2f}%."
             )
 
-    # ---------------------------------------
-    # Intervalo de Confiança - Média
-    # ---------------------------------------
-    if menu == "Intervalo de Confiança - Média":
+    # =========================================================
+    # SEÇÃO 5: Intervalo de Confiança - Média
+    # =========================================================
+    elif menu == "Intervalo de Confiança - Média":
         st.subheader("Cálculo de Intervalo de Confiança para Média")
         n = st.number_input("Tamanho da Amostra (n)", min_value=1, value=50, step=1)
         confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
@@ -297,15 +310,15 @@ def main():
             ic = intervalo_confianca_media(n, confianca, media_amostral, desvio_padrao)
             st.info(f"Intervalo de Confiança Aproximado: {ic[0]:.2f} a {ic[1]:.2f}")
             st.markdown(
-                f"**Interpretação**: Considerando uma amostra de n={n}, média observada de {media_amostral} e desvio-padrão "
-                f"de {desvio_padrao}, com {confianca}% de confiança, a média populacional provavelmente está entre "
-                f"{ic[0]:.2f} e {ic[1]:.2f}."
+                f"**Interpretação**: Para uma amostra de {n} itens, média de {media_amostral}, "
+                f"desvio-padrão {desvio_padrao} e {confianca}% de confiança, "
+                f"o intervalo ({ic[0]:.2f}, {ic[1]:.2f}) abrange o valor provável da média populacional."
             )
 
-    # ---------------------------------------
-    # Estatísticas Descritivas
-    # ---------------------------------------
-    if menu == "Estatísticas Descritivas":
+    # =========================================================
+    # SEÇÃO 6: Estatísticas Descritivas
+    # =========================================================
+    elif menu == "Estatísticas Descritivas":
         st.subheader("Estatísticas Descritivas")
         file = st.file_uploader("Faça upload de um arquivo CSV", type=["csv"], key="desc")
         if file:
@@ -318,15 +331,14 @@ def main():
                 desc = estatisticas_descritivas(df[colunas_num])
                 st.write(desc)
                 st.markdown(
-                    "**Interpretação**: Aqui, você vê estatísticas básicas como média (`mean`), desvio padrão (`std`), "
-                    "valores mínimos (`min`), máximos (`max`) e quartis (`25%`, `50%`, `75%`). Esse resumo ajuda a "
-                    "compreender rapidamente a distribuição e dispersão dos dados."
+                    "**Interpretação**: As métricas incluem média, desvio padrão, valor mínimo, valor máximo e quartis. "
+                    "Elas descrevem a tendência central e a dispersão dos dados."
                 )
 
-    # ---------------------------------------
-    # Testes de Normalidade
-    # ---------------------------------------
-    if menu == "Testes de Normalidade":
+    # =========================================================
+    # SEÇÃO 7: Testes de Normalidade
+    # =========================================================
+    elif menu == "Testes de Normalidade":
         st.subheader("Testes de Normalidade")
         file = st.file_uploader("Upload CSV para testes de normalidade", type=["csv"], key="normal")
         if file:
@@ -342,10 +354,9 @@ def main():
                 if p < 0.05:
                     st.warning("Resultado sugere que a distribuição não é normal ao nível de 5%.")
                 else:
-                    st.info("Não há evidência para rejeitar normalidade ao nível de 5%.")
+                    st.info("Não há evidência para rejeitar a normalidade ao nível de 5%.")
                 st.markdown(
-                    "**Interpretação**: Se o p-valor < 0.05, rejeitamos a hipótese de que os dados sejam normais. "
-                    "Se p-valor >= 0.05, não há evidências suficientes para rejeitar a normalidade."
+                    "**Interpretação**: p-valor < 0.05 indica que a amostra provavelmente não segue distribuição normal."
                 )
 
             if st.button("Executar Kolmogorov-Smirnov"):
@@ -354,16 +365,15 @@ def main():
                 if p < 0.05:
                     st.warning("Resultado sugere que a distribuição não é normal ao nível de 5%.")
                 else:
-                    st.info("Não há evidência para rejeitar normalidade ao nível de 5%.")
+                    st.info("Não há evidência para rejeitar a normalidade ao nível de 5%.")
                 st.markdown(
-                    "**Interpretação**: O teste K-S avalia a aderência dos dados a uma distribuição normal. "
-                    "p-valor < 0.05 indica evidência contra a normalidade."
+                    "**Interpretação**: p-valor < 0.05 sugere que a amostra se desvia de uma distribuição normal."
                 )
 
-    # ---------------------------------------
-    # Testes Não-Paramétricos
-    # ---------------------------------------
-    if menu == "Testes Não-Paramétricos":
+    # =========================================================
+    # SEÇÃO 8: Testes Não-Paramétricos
+    # =========================================================
+    elif menu == "Testes Não-Paramétricos":
         st.subheader("Testes Não-Paramétricos")
         file = st.file_uploader("Upload CSV para testes não-paramétricos", type=["csv"], key="np")
         if file:
@@ -371,7 +381,8 @@ def main():
             st.write("Exemplo de dados:")
             st.dataframe(df.head())
             col_num = st.selectbox("Coluna Numérica", [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])])
-            col_cat = st.selectbox("Coluna Categórica", [c for c in df.columns if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])])
+            col_cat = st.selectbox("Coluna Categórica", [c for c in df.columns 
+                                                         if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])])
 
             if st.button("Executar Mann-Whitney"):
                 stat, p = teste_mannwhitney(df, col_num, col_cat)
@@ -382,8 +393,8 @@ def main():
                     else:
                         st.info("Não há diferença significativa entre os grupos ao nível de 5%.")
                     st.markdown(
-                        "**Interpretação**: O teste Mann-Whitney verifica se duas amostras independentes "
-                        "têm distribuições com medianas diferentes. p-valor < 0.05 indica diferença significativa."
+                        "**Interpretação**: O teste Mann-Whitney avalia se duas amostras independentes "
+                        "têm distribuições (medianas) diferentes."
                     )
                 else:
                     st.error("Mann-Whitney requer exatamente 2 grupos na coluna categórica.")
@@ -392,18 +403,18 @@ def main():
                 stat, p = teste_kruskal(df, col_num, col_cat)
                 st.write(f"Kruskal-Wallis: Estatística={stat:.4f}, p-valor={p:.4f}")
                 if p < 0.05:
-                    st.success("Diferença significativa entre pelo menos um dos grupos ao nível de 5%.")
+                    st.success("Diferença significativa entre os grupos ao nível de 5%.")
                 else:
                     st.info("Não há diferença significativa entre os grupos ao nível de 5%.")
                 st.markdown(
-                    "**Interpretação**: O teste Kruskal-Wallis compara múltiplos grupos não-paramétricos. "
-                    "p-valor < 0.05 indica que ao menos um grupo difere significativamente dos outros."
+                    "**Interpretação**: O teste Kruskal-Wallis compara três ou mais grupos sem pressupor normalidade. "
+                    "p-valor < 0.05 indica que ao menos um grupo difere dos demais."
                 )
 
-    # ---------------------------------------
-    # Two-Way ANOVA
-    # ---------------------------------------
-    if menu == "Two-Way ANOVA":
+    # =========================================================
+    # SEÇÃO 9: Two-Way ANOVA
+    # =========================================================
+    elif menu == "Two-Way ANOVA":
         st.subheader("Two-Way ANOVA")
         file = st.file_uploader("Upload CSV para Two-Way ANOVA", type=["csv"], key="anova2")
         if file:
@@ -419,28 +430,27 @@ def main():
                 if anova_table is not None:
                     st.write(anova_table)
                     st.markdown(
-                        "**Interpretação**: A tabela ANOVA mostra o efeito de cada fator e da interação entre eles. "
-                        "Observe os p-valores para verificar se cada fator ou a interação afeta significativamente "
-                        f"a variável '{col_num}'."
+                        "**Interpretação**: Cada linha representa o efeito de um fator ou da interação entre fatores. "
+                        "Verifique os p-valores para saber se há efeitos significativos na variável numérica."
                     )
 
-    # ---------------------------------------
-    # Regressões
-    # ---------------------------------------
-    if menu == "Regressões":
+    # =========================================================
+    # SEÇÃO 10: Regressões
+    # =========================================================
+    elif menu == "Regressões":
         st.subheader("Regressões")
         file = st.file_uploader("Upload CSV para regressões", type=["csv"], key="reg")
         if file:
             df = pd.read_csv(file)
             st.write("Exemplo de dados:")
             st.dataframe(df.head())
-            st.markdown("Digite a fórmula para o modelo estatístico. Exemplo para regressão linear: `Y ~ X1 + X2`")
+            st.markdown("Informe a fórmula. Ex.: `VariavelDependente ~ VariavelIndependente1 + VariavelIndependente2`")
             formula = st.text_input("Fórmula", value="")
             tipo_regressao = st.selectbox("Tipo de Regressão", ["Linear", "Logística"])
 
             if st.button("Executar Regressão"):
                 if not formula:
-                    st.warning("Por favor, insira uma fórmula para o modelo.")
+                    st.warning("Insira uma fórmula para o modelo.")
                 else:
                     if tipo_regressao == "Linear":
                         resultado = regressao_linear(df, formula)
@@ -448,16 +458,15 @@ def main():
                         resultado = regressao_logistica(df, formula)
                     st.text_area("Resultado da Regressão", resultado, height=300)
                     st.markdown(
-                        "**Interpretação**: Nos resultados, observe coeficientes, p-valores e intervalos de confiança. "
-                        "Na regressão linear, o R² e o ajuste do modelo são importantes; "
-                        "na regressão logística, observe se os coeficientes (odds ratios) e seus p-valores "
-                        "indicam relações significativas."
+                        "**Interpretação**: Observe coeficientes, p-valores e estatísticas de ajuste. "
+                        "Na regressão linear, o R² indica quanto o modelo explica da variação da variável dependente. "
+                        "Na logística, verifique os odds-ratios (exp(coef)) e seus intervalos de confiança."
                     )
 
-    # ---------------------------------------
-    # Teste de Hipótese (One-Sample t-test)
-    # ---------------------------------------
-    if menu == "Teste de Hipótese":
+    # =========================================================
+    # SEÇÃO 11: Teste de Hipótese (One-Sample t-test)
+    # =========================================================
+    elif menu == "Teste de Hipótese":
         st.subheader("Teste de Hipótese (One-Sample t-test)")
         file = st.file_uploader("Upload CSV para teste de hipótese", type=["csv"], key="hipo")
         if file:
@@ -474,20 +483,20 @@ def main():
                 if p_val < 0.05:
                     st.success("Rejeitamos H0 ao nível de 5%.")
                     st.markdown(
-                        "**Interpretação**: Os dados sugerem que a média amostral difere significativamente da média hipotética. "
-                        "p-valor < 0.05 indica evidências para concluir que a média populacional não é igual a H0."
+                        "**Interpretação**: O p-valor < 0.05 sugere que a média amostral difere significativamente "
+                        "da média hipotética definida em H0."
                     )
                 else:
                     st.info("Não rejeitamos H0 ao nível de 5%.")
                     st.markdown(
-                        "**Interpretação**: Não há evidências suficientes para concluir que a média difira "
-                        "da média hipotética informada."
+                        "**Interpretação**: Não há evidências para afirmar que a média amostral seja diferente "
+                        "da média hipotética (H0)."
                     )
 
-    # ---------------------------------------
-    # Testes de Correlação
-    # ---------------------------------------
-    if menu == "Testes de Correlação":
+    # =========================================================
+    # SEÇÃO 12: Testes de Correlação
+    # =========================================================
+    elif menu == "Testes de Correlação":
         st.subheader("Testes de Correlação (Pearson, Spearman, Kendall)")
         file = st.file_uploader("Upload CSV para correlação", type=["csv"], key="corr")
         if file:
@@ -505,30 +514,27 @@ def main():
                     corr, p_val = stats.pearsonr(df[col_x].dropna(), df[col_y].dropna())
                     st.write(f"**Correlação de Pearson**: {corr:.4f}, p-valor={p_val:.4f}")
                     st.markdown(
-                        "**Interpretação (Pearson)**: Correlação linear, varia de -1 a +1. "
-                        "p-valor < 0.05 indica correlação linear significativa."
+                        "**Interpretação**: Correlação linear. Se p-valor < 0.05, há correlação linear significativa."
                     )
 
                 if st.button("Executar Spearman"):
                     corr, p_val = stats.spearmanr(df[col_x].dropna(), df[col_y].dropna())
                     st.write(f"**Correlação de Spearman**: {corr:.4f}, p-valor={p_val:.4f}")
                     st.markdown(
-                        "**Interpretação (Spearman)**: Mede correlação baseada em ranques, útil se os dados não forem normalmente distribuídos. "
-                        "p-valor < 0.05 indica correlação monotônica significativa."
+                        "**Interpretação**: Correlação baseada em ranques (monotônica). p-valor < 0.05 indica correlação significativa."
                     )
 
                 if st.button("Executar Kendall"):
                     corr, p_val = stats.kendalltau(df[col_x].dropna(), df[col_y].dropna())
                     st.write(f"**Correlação de Kendall**: {corr:.4f}, p-valor={p_val:.4f}")
                     st.markdown(
-                        "**Interpretação (Kendall)**: Também baseada em ranques, mas com uma abordagem diferente de Spearman. "
-                        "p-valor < 0.05 indica correlação significativa."
+                        "**Interpretação**: Também ranque, mas abordagem diferente de Spearman. p-valor < 0.05 indica correlação significativa."
                     )
 
-    # ---------------------------------------
-    # Q-Estatística (Cochrane's Q)
-    # ---------------------------------------
-    if menu == "Q-Estatística":
+    # =========================================================
+    # SEÇÃO 13: Q-Estatística (Cochrane's Q)
+    # =========================================================
+    elif menu == "Q-Estatística":
         st.subheader("Cálculo de Q-Estatística (Cochrane’s Q para meta-análise)")
         file = st.file_uploader("Upload CSV com efeitos e variâncias", type=["csv"], key="qstat")
         if file:
@@ -544,16 +550,16 @@ def main():
                     else:
                         st.info("Não há evidências de heterogeneidade significativa.")
                     st.markdown(
-                        "**Interpretação**: O Cochrane’s Q avalia se há heterogeneidade entre estudos em uma meta-análise. "
-                        "Se p-valor < 0.05, os estudos podem ser heterogêneos; caso contrário, são considerados homogêneos."
+                        "**Interpretação**: p-valor < 0.05 indica que os estudos não são homogêneos, ou seja, "
+                        "há diferença entre eles que pode impactar a meta-análise."
                     )
                 except Exception as e:
-                    st.error(f"Erro: {e}. Verifique as colunas 'effect' e 'variance' no CSV.")
+                    st.error(f"Erro: {e}. Verifique se as colunas 'effect' e 'variance' existem no CSV.")
 
-    # ---------------------------------------
-    # Q-Exponencial
-    # ---------------------------------------
-    if menu == "Q-Exponencial":
+    # =========================================================
+    # SEÇÃO 14: Q-Exponencial
+    # =========================================================
+    elif menu == "Q-Exponencial":
         st.subheader("Ajuste Q-Exponencial (Estatística de Tsallis)")
         file = st.file_uploader("Upload CSV com dados para ajuste", type=["csv"], key="qexp")
         if file:
@@ -568,10 +574,9 @@ def main():
                     lam_fit, q_fit = fit_q_exponential(data)
                     st.write(f"**Parâmetros ajustados**: λ = {lam_fit:.4f}, q = {q_fit:.4f}")
                     st.markdown(
-                        "**Interpretação**: O modelo q-exponencial (estatística de Tsallis) "
-                        "é uma generalização da distribuição exponencial. "
-                        "O parâmetro q reflete o grau de não-extensividade do sistema. "
-                        "Valores de q próximos de 1 se aproximam de uma exponencial simples."
+                        "**Interpretação**: A distribuição q-exponencial é uma generalização da exponencial. "
+                        "Valores de q próximos de 1 indicam comportamento semelhante à exponencial simples; "
+                        "valores de q diferentes de 1 sugerem sistemas não-extensivos (Tsallis)."
                     )
                 except Exception as e:
                     st.error(f"Falha ao ajustar Q-Exponencial: {e}")
