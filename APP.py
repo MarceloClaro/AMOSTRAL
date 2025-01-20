@@ -355,16 +355,30 @@ def main():
                 st.pyplot(fig)
 
     # SEÇÃO 9: Two-Way ANOVA
-   
     elif menu == "Two-Way ANOVA":
         st.subheader("Two-Way ANOVA")
         st.markdown("""
             **Orientações para Two-Way ANOVA**:
             - Faça upload de um arquivo CSV contendo dados.
             - Selecione uma variável numérica dependente e duas variáveis categóricas como fatores.
-            - O teste ANOVA avaliará se há diferenças significativas na variável numérica entre os grupos definidos pelos fatores e suas interações.
-            - Certifique-se de que seus dados estejam limpos (sem NaN ou Inf) para obter resultados precisos.
+            - A Two-Way ANOVA avalia se há diferenças significativas na média da variável dependente entre grupos formados pelos fatores,
+              considerando também a interação entre eles.
+            - A análise fornece uma tabela com estatísticas F e p-valores para cada fator e para a interação, permitindo identificar quais 
+              efeitos são estatisticamente significativos.
+            - Certifique-se de que seus dados estejam limpos (sem valores ausentes - NaN ou infinitos - Inf) para obter resultados precisos.
         """)
+        st.markdown("#### Fórmula Geral para Two-Way ANOVA:")
+        st.latex(r"Y_{ijk} = \mu + \alpha_i + \beta_j + (\alpha\beta)_{ij} + \epsilon_{ijk}")
+        st.markdown("""
+            Onde:
+            - \(Y_{ijk}\) é a observação da variável dependente para o nível \(i\) do Fator 1, nível \(j\) do Fator 2 e réplica \(k\).
+            - \(\mu\) é a média geral.
+            - \(\alpha_i\) é o efeito do \(i\)-ésimo nível do Fator 1.
+            - \(\beta_j\) é o efeito do \(j\)-ésimo nível do Fator 2.
+            - \((\alpha\beta)_{ij}\) é o efeito de interação entre os níveis \(i\) e \(j\) dos dois fatores.
+            - \(\epsilon_{ijk}\) é o erro aleatório ou residual.
+        """)
+
         file = st.file_uploader("Upload de CSV para Two-Way ANOVA", type=["csv"], key="anova2")
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
@@ -372,9 +386,9 @@ def main():
             st.dataframe(df.head())
 
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-            colunas_cat = [c for c in df.columns if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])]
+            colunas_cat = [c for c in df.columns if df[c].dtype == 'object' 
+                           or pd.api.types.is_categorical_dtype(df[c])]
 
-            # Verificações de quantidade de variáveis categóricas e numéricas
             if len(colunas_cat) < 2:
                 st.warning("É necessário pelo menos duas variáveis categóricas para Two-Way ANOVA.")
             elif not colunas_num:
@@ -389,15 +403,41 @@ def main():
                     if res is not None:
                         st.dataframe(res)
                         st.markdown("### Interpretação Detalhada da Tabela ANOVA:")
+                        st.markdown("""
+                        A tabela ANOVA acima apresenta os resultados do teste Two-Way ANOVA. 
+                        Cada linha corresponde a uma fonte de variação no modelo:
+                        - **C({cat1})**: efeito do primeiro fator.
+                        - **C({cat2})**: efeito do segundo fator.
+                        - **C({cat1}):C({cat2})**: efeito de interação entre os dois fatores.
+                        - **Residual**: variabilidade não explicada pelos fatores.
+                        
+                        Para cada fonte, a tabela mostra:
+                        - **Estatística F**: razão entre a variação explicada pelo efeito e a variação residual. 
+                          Valores maiores de F indicam que o efeito provavelmente não é devido ao acaso.
+                        - **p-valor** (PR(>F)): probabilidade de obter um valor de F tão extremo quanto o observado 
+                          se a hipótese nula (de que não há efeito) for verdadeira.
+                        """)
                         for index, row in res.iterrows():
                             st.markdown(f"**{index}**:")
                             st.markdown(f"- Estatística F: {row['F']:.3f}")
                             st.markdown(f"- p-valor: {row['PR(>F)']:.3f}")
                             if row['PR(>F)'] < 0.05:
-                                st.markdown(f"- **Significativo**: Indica que {index} tem um efeito significativo sobre {col_num}.")
+                                st.markdown(f"- **Significativo**: O efeito de {index} em {col_num} é estatisticamente significativo.")
+                                if index == f"C({cat1}):C({cat2})":
+                                    st.markdown("- Isso sugere que a interação entre os fatores altera significativamente a média de {}.".format(col_num))
+                                else:
+                                    st.markdown(f"- Isso significa que diferentes níveis de {index.split(']')[0].split('[')[-1]} alteram significativamente {col_num}.")
                             else:
-                                st.markdown(f"- **Não significativo**: Indica que {index} não tem efeito estatístico significativo sobre {col_num} no nível de 5%.")
+                                st.markdown(f"- **Não significativo**: Não há efeito estatístico significativo de {index} em {col_num} ao nível de 5%.")
                         
+                        st.markdown("""
+                        ### Considerações Adicionais:
+                        - Um p-valor menor que 0.05 para um fator sugere que pelo menos um dos grupos daquele fator tem uma média significativamente diferente dos demais.
+                        - Um p-valor significativo para a interação indica que o efeito de um fator depende do nível do outro.
+                        - Altos valores de F com p-valores baixos sugerem que os fatores ou a interação explicam uma parte importante da variabilidade em {}.
+                        - As suposições de homogeneidade das variâncias e normalidade dos resíduos devem ser verificadas para validar os resultados da ANOVA.
+                        """.format(col_num))
+
                         fig, ax = plt.subplots(figsize=(8,6))
                         sns.boxplot(data=df, x=cat1, y=col_num, hue=cat2, ax=ax)
                         ax.set_title(f"Distribuição de {col_num} por {cat1} e {cat2}")
