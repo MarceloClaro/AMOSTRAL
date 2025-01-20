@@ -483,7 +483,6 @@ def main():
                         st.error("A análise Two-Way ANOVA não pôde ser realizada. Verifique seus dados e seleções.")
 
     # SEÇÃO 10: Regressões com geração automática de fórmula
-    # SEÇÃO 10: Regressões com geração automática de fórmula
     elif menu == "Regressões":
         st.subheader("Regressões")
         st.markdown(r"""
@@ -540,8 +539,8 @@ def main():
                         # [Código para regressão linear permanece igual...]
                         pass  
                     else:
-                        # Bloco para Regressão Logística
                         unique_vals = df[dep_var].dropna().unique()
+                        # Checa se a variável é binária
                         if not set(unique_vals).issubset({0,1}):
                             st.warning("Para regressão logística, a variável dependente deve ser binária (0 ou 1).")
                             st.markdown("""
@@ -574,6 +573,9 @@ def main():
                             unique_vals = df[dep_var].unique()
                             st.markdown(f"Após conversão, os valores únicos da variável dependente são: {unique_vals}")
                             
+                            st.markdown(f"#### Visualização dos primeiros registros após a conversão:")
+                            st.dataframe(df.head())
+
                             st.markdown(f"**Distribuição de {dep_var} após conversão usando {conversion_method}:**")
                             fig, ax = plt.subplots()
                             sns.countplot(x=df[dep_var], ax=ax, palette="pastel")
@@ -581,30 +583,24 @@ def main():
                             ax.set_xlabel(f"Valores de {dep_var} (0 ou 1)")
                             ax.set_ylabel("Frequência")
                             st.pyplot(fig)
-                            
-                            st.markdown("""
-                                **Pronto para executar a regressão logística:**
-                                - A variável dependente agora é binária.
-                                - Pressione novamente o botão **Executar Regressão** para rodar a análise logística com a variável convertida.
+
+                        try:
+                            resultado = regressao_logistica(df, auto_formula)
+                            st.text_area("Saída da Regressão Logística", resultado, height=300)
+                            st.markdown(r"""
+                                **Interpretação da Regressão Logística**:
+                                - A regressão logística estima a probabilidade de ocorrência de um evento (valor 1).
+                                - A fórmula geral é:
                             """)
-                        else:
-                            try:
-                                resultado = regressao_logistica(df, auto_formula)
-                                st.text_area("Saída da Regressão Logística", resultado, height=300)
-                                st.markdown(r"""
-                                    **Interpretação da Regressão Logística**:
-                                    - A regressão logística estima a probabilidade de ocorrência de um evento (valor 1).
-                                    - A fórmula geral é:
-                                """)
-                                st.latex(r"\log\left(\frac{p}{1-p}\right) = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \dots")
-                                st.markdown(r"""
-                                    onde \(p\) é a probabilidade de \(Y = 1\).
-                                    - Os coeficientes (\(\beta_i\)) indicam como as variáveis independentes afetam o log-odds do evento.
-                                    - Coeficientes com p-valores menores que 0.05 sugerem efeito significativo na probabilidade do evento.
-                                    - Calcular os odds-ratios (\(\exp(\beta_i)\)) ajuda a entender o impacto prático de cada variável.
-                                """)
-                            except Exception as e:
-                                st.error(f"Erro na regressão logística: {e}")
+                            st.latex(r"\log\left(\frac{p}{1-p}\right) = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \dots")
+                            st.markdown(r"""
+                                onde \(p\) é a probabilidade de \(Y = 1\).
+                                - Os coeficientes (\(\beta_i\)) indicam como as variáveis independentes afetam o log-odds do evento.
+                                - Coeficientes com p-valores menores que 0.05 sugerem efeito significativo na probabilidade do evento.
+                                - Calcular os odds-ratios (\(\exp(\beta_i)\)) ajuda a entender o impacto prático de cada variável.
+                            """)
+                        except Exception as e:
+                            st.error(f"Erro na regressão logística: {e}")
 
     # SEÇÃO 11: Teste de Hipótese
     elif menu == "Teste de Hipótese":
