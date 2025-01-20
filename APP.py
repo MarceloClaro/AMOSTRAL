@@ -518,10 +518,7 @@ def main():
     
             terms = []
             for var in indep_vars:
-                if var in categorical_cols:
-                    terms.append(f"C({var})")
-                else:
-                    terms.append(var)
+                terms.append(f"C({var})" if var in categorical_cols else var)
             if dep_var and terms:
                 auto_formula = f"{dep_var} ~ " + " + ".join(terms)
                 st.markdown("**Fórmula gerada automaticamente:**")
@@ -555,7 +552,7 @@ def main():
                                     - \(\epsilon\) é o erro residual, a parte da variação em \(Y\) não 
                                       explicada pelas variáveis independentes.
                                 """)
-    
+            
                                 r2 = modelo.rsquared
                                 adj_r2 = modelo.rsquared_adj
                                 st.markdown(f"**R-quadrado (R²)**: {r2:.3f}")
@@ -572,11 +569,9 @@ def main():
                                     - Coeficientes com p-valores menores que 0.05 sugerem que as variáveis independentes 
                                       têm impacto estatístico significativo em \(Y\).
                                     - O sinal do coeficiente indica a direção da relação (positivo ou negativo).
-                                    - Estes resultados ajudam a entender quais variáveis influenciam a variável dependente 
-                                      e como.
                                 """)
                                 
-                                # Exemplo de plotagem para regressão linear
+                                # Plotagem para regressão linear
                                 predictions = modelo.predict(data_clean)
                                 fig, ax = plt.subplots()
                                 ax.scatter(data_clean.index, data_clean[dep_var], label='Real')
@@ -589,7 +584,6 @@ def main():
     
                             except Exception as e:
                                 st.error(f"Erro na regressão linear: {e}")
-    
                     else:
                         unique_vals = df[dep_var].dropna().unique()
                         if not set(unique_vals).issubset({0,1}):
@@ -646,7 +640,7 @@ def main():
                                     """)
                                 except Exception as e:
                                     st.error(f"Erro na regressão logística: {e}")
-    
+        
                         else:
                             try:
                                 resultado = regressao_logistica(df, auto_formula)
