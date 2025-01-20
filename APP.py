@@ -552,7 +552,7 @@ def main():
                                     - \(\epsilon\) é o erro residual, a parte da variação em \(Y\) não 
                                       explicada pelas variáveis independentes.
                                 """)
-            
+    
                                 r2 = modelo.rsquared
                                 adj_r2 = modelo.rsquared_adj
                                 st.markdown(f"**R-quadrado (R²)**: {r2:.3f}")
@@ -586,79 +586,39 @@ def main():
                                 st.error(f"Erro na regressão linear: {e}")
                     else:
                         unique_vals = df[dep_var].dropna().unique()
+                        # Se a variável dependente não for binária, converte automaticamente pela mediana
                         if not set(unique_vals).issubset({0,1}):
-                            st.warning("Para regressão logística, a variável dependente deve ser binária (0 ou 1).")
-                            st.markdown("**Opções de conversão automática:**")
-                            conversion_method = st.radio(
-                                "Escolha o método de binarização",
-                                ["Mediana", "Média", "Percentil 75", "Percentil 25"]
-                            )
-                            if st.button("Converter"):
-                                if conversion_method == "Mediana":
-                                    threshold = df[dep_var].median()
-                                    st.markdown(f"**Usando a Mediana como limiar:** {threshold:.3f}")
-                                    st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Mediana} \\ 0 & \text{caso contrário} \end{cases}")
-                                elif conversion_method == "Média":
-                                    threshold = df[dep_var].mean()
-                                    st.markdown(f"**Usando a Média como limiar:** {threshold:.3f}")
-                                    st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Média} \\ 0 & \text{caso contrário} \end{cases}")
-                                elif conversion_method == "Percentil 75":
-                                    threshold = df[dep_var].quantile(0.75)
-                                    st.markdown(f"**Usando o Percentil 75 como limiar:** {threshold:.3f}")
-                                    st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Percentil }75\% \\ 0 & \text{caso contrário} \end{cases}")
-                                elif conversion_method == "Percentil 25":
-                                    threshold = df[dep_var].quantile(0.25)
-                                    st.markdown(f"**Usando o Percentil 25 como limiar:** {threshold:.3f}")
-                                    st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Percentil }25\% \\ 0 & \text{caso contrário} \end{cases}")
-        
-                                df[dep_var] = (df[dep_var] > threshold).astype(int)
-                                st.markdown(f"Após conversão, os valores únicos da variável dependente são: {df[dep_var].unique()}")
-                                st.dataframe(df.head())
-                                fig, ax = plt.subplots()
-                                sns.countplot(x=df[dep_var], ax=ax, palette="pastel")
-                                ax.set_title(f"Contagem de valores binários em {dep_var}")
-                                ax.set_xlabel(f"Valores de {dep_var} (0 ou 1)")
-                                ax.set_ylabel("Frequência")
-                                st.pyplot(fig)
-                                try:
-                                    resultado = regressao_logistica(df, auto_formula)
-                                    st.text_area("Saída da Regressão Logística", resultado, height=300)
-                                    st.markdown(r"""
-                                        **Interpretação da Regressão Logística**:
-                                        - A regressão logística estima a probabilidade de ocorrência de um evento (valor 1).
-                                        - A fórmula geral é:
-                                    """)
-                                    st.latex(r"\log\left(\frac{p}{1-p}\right) = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \dots")
-                                    st.markdown(r"""
-                                        onde \(p\) é a probabilidade de \(Y = 1\).
-                                        - Os coeficientes (\(\beta_i\)) indicam como as variáveis independentes 
-                                          afetam o log-odds do evento.
-                                        - Coeficientes com p-valores menores que 0.05 sugerem efeito 
-                                          significativo na probabilidade do evento.
-                                        - Calcular os odds-ratios (\(\exp(\beta_i)\)) ajuda a entender 
-                                          o impacto prático de cada variável.
-                                    """)
-                                except Exception as e:
-                                    st.error(f"Erro na regressão logística: {e}")
-        
-                        else:
-                            try:
-                                resultado = regressao_logistica(df, auto_formula)
-                                st.text_area("Saída da Regressão Logística", resultado, height=300)
-                                st.markdown(r"""
-                                    **Interpretação da Regressão Logística**:
-                                    - A regressão logística estima a probabilidade de ocorrência de um evento (valor 1).
-                                    - A fórmula geral é:
-                                """)
-                                st.latex(r"\log\left(\frac{p}{1-p}\right) = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \dots")
-                                st.markdown(r"""
-                                    onde \(p\) é a probabilidade de \(Y = 1\).
-                                    - Os coeficientes (\(\beta_i\)) indicam como as variáveis independentes afetam o log-odds do evento.
-                                    - Coeficientes com p-valores menores que 0.05 sugerem efeito significativo na probabilidade do evento.
-                                    - Calcular os odds-ratios (\(\exp(\beta_i)\)) ajuda a entender o impacto prático de cada variável.
-                                """)
-                            except Exception as e:
-                                st.error(f"Erro na regressão logística: {e}")
+                            st.warning("Para regressão logística, a variável dependente deve ser binária (0 ou 1). Aplicando conversão automática pela Mediana.")
+                            threshold = df[dep_var].median()
+                            st.markdown(f"**Usando a Mediana como limiar:** {threshold:.3f}")
+                            st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Mediana} \\ 0 & \text{caso contrário} \end{cases}")
+                            df[dep_var] = (df[dep_var] > threshold).astype(int)
+                            st.markdown(f"Após conversão, os valores únicos da variável dependente são: {df[dep_var].unique()}")
+                            st.dataframe(df.head())
+                            fig, ax = plt.subplots()
+                            sns.countplot(x=df[dep_var], ax=ax, palette="pastel")
+                            ax.set_title(f"Contagem de valores binários em {dep_var}")
+                            ax.set_xlabel(f"Valores de {dep_var} (0 ou 1)")
+                            ax.set_ylabel("Frequência")
+                            st.pyplot(fig)
+    
+                        try:
+                            resultado = regressao_logistica(df, auto_formula)
+                            st.text_area("Saída da Regressão Logística", resultado, height=300)
+                            st.markdown(r"""
+                                **Interpretação da Regressão Logística**:
+                                - A regressão logística estima a probabilidade de ocorrência de um evento (valor 1).
+                                - A fórmula geral é:
+                            """)
+                            st.latex(r"\log\left(\frac{p}{1-p}\right) = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \dots")
+                            st.markdown(r"""
+                                onde \(p\) é a probabilidade de \(Y = 1\).
+                                - Os coeficientes (\(\beta_i\)) indicam como as variáveis independentes afetam o log-odds do evento.
+                                - Coeficientes com p-valores menores que 0.05 sugerem efeito significativo na probabilidade do evento.
+                                - Calcular os odds-ratios (\(\exp(\beta_i)\)) ajuda a entender o impacto prático de cada variável.
+                            """)
+                        except Exception as e:
+                            st.error(f"Erro na regressão logística: {e}")
 
     # SEÇÃO 11: Teste de Hipótese
     elif menu == "Teste de Hipótese":
