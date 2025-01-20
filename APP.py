@@ -578,8 +578,6 @@ elif menu == "Regressões":
                                 """)
                             except Exception as e:
                                 st.error(f"Erro na regressão linear: {e}")
-
-                    pass  
                 else:
                     unique_vals = df[dep_var].dropna().unique()
                     if not set(unique_vals).issubset({0,1}):
