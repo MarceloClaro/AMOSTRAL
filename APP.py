@@ -576,7 +576,7 @@ def main():
                                       e como.
                                 """)
                                 
-                                # Plotagem básica para regressão linear
+                                # Exemplo de plotagem para regressão linear
                                 predictions = modelo.predict(data_clean)
                                 fig, ax = plt.subplots()
                                 ax.scatter(data_clean.index, data_clean[dep_var], label='Real')
@@ -595,12 +595,28 @@ def main():
                         if not set(unique_vals).issubset({0,1}):
                             st.warning("Para regressão logística, a variável dependente deve ser binária (0 ou 1).")
                             st.markdown("**Opções de conversão automática:**")
-    
-                            # Botão para conversão usando Mediana
-                            if st.button("Converter com Mediana"):
-                                threshold = df[dep_var].median()
-                                st.markdown(f"**Usando a Mediana como limiar:** {threshold:.3f}")
-                                st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Mediana} \\ 0 & \text{caso contrário} \end{cases}")
+                            conversion_method = st.radio(
+                                "Escolha o método de binarização",
+                                ["Mediana", "Média", "Percentil 75", "Percentil 25"]
+                            )
+                            if st.button("Converter"):
+                                if conversion_method == "Mediana":
+                                    threshold = df[dep_var].median()
+                                    st.markdown(f"**Usando a Mediana como limiar:** {threshold:.3f}")
+                                    st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Mediana} \\ 0 & \text{caso contrário} \end{cases}")
+                                elif conversion_method == "Média":
+                                    threshold = df[dep_var].mean()
+                                    st.markdown(f"**Usando a Média como limiar:** {threshold:.3f}")
+                                    st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Média} \\ 0 & \text{caso contrário} \end{cases}")
+                                elif conversion_method == "Percentil 75":
+                                    threshold = df[dep_var].quantile(0.75)
+                                    st.markdown(f"**Usando o Percentil 75 como limiar:** {threshold:.3f}")
+                                    st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Percentil }75\% \\ 0 & \text{caso contrário} \end{cases}")
+                                elif conversion_method == "Percentil 25":
+                                    threshold = df[dep_var].quantile(0.25)
+                                    st.markdown(f"**Usando o Percentil 25 como limiar:** {threshold:.3f}")
+                                    st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Percentil }25\% \\ 0 & \text{caso contrário} \end{cases}")
+        
                                 df[dep_var] = (df[dep_var] > threshold).astype(int)
                                 st.markdown(f"Após conversão, os valores únicos da variável dependente são: {df[dep_var].unique()}")
                                 st.dataframe(df.head())
@@ -628,66 +644,6 @@ def main():
                                         - Calcular os odds-ratios (\(\exp(\beta_i)\)) ajuda a entender 
                                           o impacto prático de cada variável.
                                     """)
-                                except Exception as e:
-                                    st.error(f"Erro na regressão logística: {e}")
-    
-                            # Botão para conversão usando Média
-                            if st.button("Converter com Média"):
-                                threshold = df[dep_var].mean()
-                                st.markdown(f"**Usando a Média como limiar:** {threshold:.3f}")
-                                st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Média} \\ 0 & \text{caso contrário} \end{cases}")
-                                df[dep_var] = (df[dep_var] > threshold).astype(int)
-                                st.markdown(f"Após conversão, os valores únicos da variável dependente são: {df[dep_var].unique()}")
-                                st.dataframe(df.head())
-                                fig, ax = plt.subplots()
-                                sns.countplot(x=df[dep_var], ax=ax, palette="pastel")
-                                ax.set_title(f"Contagem de valores binários em {dep_var}")
-                                ax.set_xlabel(f"Valores de {dep_var} (0 ou 1)")
-                                ax.set_ylabel("Frequência")
-                                st.pyplot(fig)
-                                try:
-                                    resultado = regressao_logistica(df, auto_formula)
-                                    st.text_area("Saída da Regressão Logística", resultado, height=300)
-                                except Exception as e:
-                                    st.error(f"Erro na regressão logística: {e}")
-    
-                            # Botão para conversão usando Percentil 75
-                            if st.button("Converter com Percentil 75"):
-                                threshold = df[dep_var].quantile(0.75)
-                                st.markdown(f"**Usando o Percentil 75 como limiar:** {threshold:.3f}")
-                                st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Percentil }75\% \\ 0 & \text{caso contrário} \end{cases}")
-                                df[dep_var] = (df[dep_var] > threshold).astype(int)
-                                st.markdown(f"Após conversão, os valores únicos da variável dependente são: {df[dep_var].unique()}")
-                                st.dataframe(df.head())
-                                fig, ax = plt.subplots()
-                                sns.countplot(x=df[dep_var], ax=ax, palette="pastel")
-                                ax.set_title(f"Contagem de valores binários em {dep_var}")
-                                ax.set_xlabel(f"Valores de {dep_var} (0 ou 1)")
-                                ax.set_ylabel("Frequência")
-                                st.pyplot(fig)
-                                try:
-                                    resultado = regressao_logistica(df, auto_formula)
-                                    st.text_area("Saída da Regressão Logística", resultado, height=300)
-                                except Exception as e:
-                                    st.error(f"Erro na regressão logística: {e}")
-    
-                            # Botão para conversão usando Percentil 25
-                            if st.button("Converter com Percentil 25"):
-                                threshold = df[dep_var].quantile(0.25)
-                                st.markdown(f"**Usando o Percentil 25 como limiar:** {threshold:.3f}")
-                                st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Percentil }25\% \\ 0 & \text{caso contrário} \end{cases}")
-                                df[dep_var] = (df[dep_var] > threshold).astype(int)
-                                st.markdown(f"Após conversão, os valores únicos da variável dependente são: {df[dep_var].unique()}")
-                                st.dataframe(df.head())
-                                fig, ax = plt.subplots()
-                                sns.countplot(x=df[dep_var], ax=ax, palette="pastel")
-                                ax.set_title(f"Contagem de valores binários em {dep_var}")
-                                ax.set_xlabel(f"Valores de {dep_var} (0 ou 1)")
-                                ax.set_ylabel("Frequência")
-                                st.pyplot(fig)
-                                try:
-                                    resultado = regressao_logistica(df, auto_formula)
-                                    st.text_area("Saída da Regressão Logística", resultado, height=300)
                                 except Exception as e:
                                     st.error(f"Erro na regressão logística: {e}")
     
