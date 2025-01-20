@@ -536,7 +536,6 @@ def main():
                     st.error("Variável dependente ou independentes não definidos. Certifique-se de selecionar as variáveis necessárias.")
                 else:
                     if tipo == "Linear":
-                        # Execução da regressão linear
                         data_clean = df.replace([np.inf, -np.inf], np.nan).dropna()
                         if data_clean.empty:
                             st.error("Dados insuficientes após limpeza. Verifique seu dataset para valores ausentes ou infinitos.")
@@ -576,6 +575,18 @@ def main():
                                     - Estes resultados ajudam a entender quais variáveis influenciam a variável dependente 
                                       e como.
                                 """)
+                                
+                                # Plotagem básica para regressão linear
+                                predictions = modelo.predict(data_clean)
+                                fig, ax = plt.subplots()
+                                ax.scatter(data_clean.index, data_clean[dep_var], label='Real')
+                                ax.plot(data_clean.index, predictions, color='red', label='Predito')
+                                ax.set_title("Valores reais vs Preditos")
+                                ax.set_xlabel("Índice")
+                                ax.set_ylabel(dep_var)
+                                ax.legend()
+                                st.pyplot(fig)
+    
                             except Exception as e:
                                 st.error(f"Erro na regressão linear: {e}")
     
