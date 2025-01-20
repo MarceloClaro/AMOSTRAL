@@ -320,13 +320,22 @@ def main():
     # =========================================================
     elif menu == "Estatísticas Descritivas":
         st.subheader("Estatísticas Descritivas")
+        st.markdown("""
+            **Instruções**:
+            1. Faça upload de um arquivo CSV.
+            2. Selecione as colunas numéricas que deseja analisar (colunas que contêm valores decimais ou inteiros).
+            3. As colunas com valores de texto ou categorias não devem ser selecionadas para estatísticas descritivas.
+        """)
         file = st.file_uploader("Faça upload de um arquivo CSV", type=["csv"], key="desc")
         if file:
             df = pd.read_csv(file)
             st.write("Exemplo de dados:")
             st.dataframe(df.head())
-            colunas_num = st.multiselect("Selecione colunas numéricas", df.columns.tolist(),
-                                         default=[c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])])
+            colunas_num = st.multiselect(
+                "Selecione colunas numéricas (ex.: valores contínuos ou inteiros)",
+                df.columns.tolist(),
+                default=[c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+            )
             if colunas_num:
                 desc = estatisticas_descritivas(df[colunas_num])
                 st.write(desc)
@@ -340,13 +349,19 @@ def main():
     # =========================================================
     elif menu == "Testes de Normalidade":
         st.subheader("Testes de Normalidade")
+        st.markdown("""
+            **Instruções**:
+            1. Faça upload de um CSV que contenha ao menos uma coluna numérica (ex.: colunas de valores contínuos).
+            2. Selecione a coluna numérica para verificar se os dados seguem distribuição normal.
+        """)
         file = st.file_uploader("Upload CSV para testes de normalidade", type=["csv"], key="normal")
         if file:
             df = pd.read_csv(file)
             st.write("Exemplo de dados:")
             st.dataframe(df.head())
-            coluna = st.selectbox("Selecione a coluna numérica para teste de normalidade", 
-                                  [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])])
+            # Filtra apenas colunas numéricas
+            colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+            coluna = st.selectbox("Selecione a coluna numérica para teste de normalidade", colunas_num)
 
             if st.button("Executar Shapiro-Wilk"):
                 stat, p = teste_shapiro(df[coluna])
@@ -375,14 +390,26 @@ def main():
     # =========================================================
     elif menu == "Testes Não-Paramétricos":
         st.subheader("Testes Não-Paramétricos")
+        st.markdown("""
+            **Instruções**:
+            1. Faça upload de um CSV.
+            2. Identifique qual a **coluna numérica** (ex.: valores contínuos).
+            3. Escolha a **coluna categórica** (ex.: grupos representados por texto ou 'category').
+            - Para Mann-Whitney: a coluna categórica deve conter **exatamente 2 grupos**.
+            - Para Kruskal-Wallis: pode conter 3 ou mais grupos.
+        """)
         file = st.file_uploader("Upload CSV para testes não-paramétricos", type=["csv"], key="np")
         if file:
             df = pd.read_csv(file)
             st.write("Exemplo de dados:")
             st.dataframe(df.head())
-            col_num = st.selectbox("Coluna Numérica", [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])])
-            col_cat = st.selectbox("Coluna Categórica", [c for c in df.columns 
-                                                         if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])])
+
+            # Identifica possíveis colunas
+            colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+            colunas_cat = [c for c in df.columns if (df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c]))]
+
+            col_num = st.selectbox("Coluna Numérica (valor contínuo)", colunas_num)
+            col_cat = st.selectbox("Coluna Categórica (ex.: grupos, texto ou category)", colunas_cat)
 
             if st.button("Executar Mann-Whitney"):
                 stat, p = teste_mannwhitney(df, col_num, col_cat)
@@ -416,14 +443,24 @@ def main():
     # =========================================================
     elif menu == "Two-Way ANOVA":
         st.subheader("Two-Way ANOVA")
+        st.markdown("""
+            **Instruções**:
+            1. Faça upload de um CSV.
+            2. Selecione a **coluna numérica** (valor contínuo) como variável dependente.
+            3. Escolha duas **colunas categóricas** (ex.: fator 1 e fator 2, que representem grupos, como texto ou category).
+        """)
         file = st.file_uploader("Upload CSV para Two-Way ANOVA", type=["csv"], key="anova2")
         if file:
             df = pd.read_csv(file)
             st.write("Exemplo de dados:")
             st.dataframe(df.head())
-            col_num = st.selectbox("Coluna Numérica", [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])])
-            cat1 = st.selectbox("Fator 1", [c for c in df.columns if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])])
-            cat2 = st.selectbox("Fator 2", [c for c in df.columns if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])])
+
+            colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+            colunas_cat = [c for c in df.columns if (df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c]))]
+
+            col_num = st.selectbox("Coluna Numérica (dependente)", colunas_num)
+            cat1 = st.selectbox("Fator 1 (categórico)", colunas_cat)
+            cat2 = st.selectbox("Fator 2 (categórico)", colunas_cat)
 
             if st.button("Executar Two-Way ANOVA"):
                 anova_table = anova_two_way(df, col_num, cat1, cat2)
@@ -439,11 +476,20 @@ def main():
     # =========================================================
     elif menu == "Regressões":
         st.subheader("Regressões")
+        st.markdown("""
+            **Instruções**:
+            1. Faça upload de um CSV.
+            2. Observe quais colunas são numéricas (variáveis quantitativas) e categóricas (grupos, texto).
+            3. Monte a fórmula no estilo `VariavelDependente ~ VariavelIndependente1 + VariavelIndependente2`.
+               - Para variáveis categóricas, normalmente o modelo as interpreta como fatores automaticamente (ex.: `C(Coluna)` se precisar explicitar).
+            4. Selecione o tipo de regressão (Linear ou Logística).
+        """)
         file = st.file_uploader("Upload CSV para regressões", type=["csv"], key="reg")
         if file:
             df = pd.read_csv(file)
             st.write("Exemplo de dados:")
             st.dataframe(df.head())
+
             st.markdown("Informe a fórmula. Ex.: `VariavelDependente ~ VariavelIndependente1 + VariavelIndependente2`")
             formula = st.text_input("Fórmula", value="")
             tipo_regressao = st.selectbox("Tipo de Regressão", ["Linear", "Logística"])
@@ -468,12 +514,19 @@ def main():
     # =========================================================
     elif menu == "Teste de Hipótese":
         st.subheader("Teste de Hipótese (One-Sample t-test)")
+        st.markdown("""
+            **Instruções**:
+            1. Faça upload de um CSV.
+            2. Selecione a **coluna numérica** (ex.: valores contínuos).
+            3. Defina uma média hipotética (H0) para comparar.
+        """)
         file = st.file_uploader("Upload CSV para teste de hipótese", type=["csv"], key="hipo")
         if file:
             df = pd.read_csv(file)
             st.dataframe(df.head())
-            col_num = st.selectbox("Selecione a coluna numérica para teste", 
-                                   [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])], key="hipo_col")
+
+            colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+            col_num = st.selectbox("Selecione a coluna numérica para teste", colunas_num, key="hipo_col")
             media_hipotetica = st.number_input("Média hipotética (H0)", value=0.0, key="hipo_mean")
 
             if st.button("Executar One-Sample t-test"):
@@ -498,6 +551,12 @@ def main():
     # =========================================================
     elif menu == "Testes de Correlação":
         st.subheader("Testes de Correlação (Pearson, Spearman, Kendall)")
+        st.markdown("""
+            **Instruções**:
+            1. Faça upload de um CSV que contenha ao menos duas colunas numéricas.
+            2. Selecione a primeira e a segunda coluna numérica para avaliar a correlação.
+            3. Escolha o teste desejado (Pearson, Spearman ou Kendall).
+        """)
         file = st.file_uploader("Upload CSV para correlação", type=["csv"], key="corr")
         if file:
             df = pd.read_csv(file)
@@ -505,7 +564,7 @@ def main():
             st.dataframe(df.head())
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
             if len(colunas_num) < 2:
-                st.warning("O arquivo deve conter ao menos duas colunas numéricas.")
+                st.warning("O arquivo deve conter ao menos duas colunas numéricas para correlação.")
             else:
                 col_x = st.selectbox("Selecione a primeira variável (X)", colunas_num, key="corr_x")
                 col_y = st.selectbox("Selecione a segunda variável (Y)", colunas_num, key="corr_y")
@@ -514,21 +573,21 @@ def main():
                     corr, p_val = stats.pearsonr(df[col_x].dropna(), df[col_y].dropna())
                     st.write(f"**Correlação de Pearson**: {corr:.4f}, p-valor={p_val:.4f}")
                     st.markdown(
-                        "**Interpretação**: Correlação linear. Se p-valor < 0.05, há correlação linear significativa."
+                        "**Interpretação (Pearson)**: Correlação linear. p-valor < 0.05 indica correlação linear significativa."
                     )
 
                 if st.button("Executar Spearman"):
                     corr, p_val = stats.spearmanr(df[col_x].dropna(), df[col_y].dropna())
                     st.write(f"**Correlação de Spearman**: {corr:.4f}, p-valor={p_val:.4f}")
                     st.markdown(
-                        "**Interpretação**: Correlação baseada em ranques (monotônica). p-valor < 0.05 indica correlação significativa."
+                        "**Interpretação (Spearman)**: Correlação baseada em ranques (monotônica). p-valor < 0.05 indica correlação significativa."
                     )
 
                 if st.button("Executar Kendall"):
                     corr, p_val = stats.kendalltau(df[col_x].dropna(), df[col_y].dropna())
                     st.write(f"**Correlação de Kendall**: {corr:.4f}, p-valor={p_val:.4f}")
                     st.markdown(
-                        "**Interpretação**: Também ranque, mas abordagem diferente de Spearman. p-valor < 0.05 indica correlação significativa."
+                        "**Interpretação (Kendall)**: Também ranque, mas abordagem diferente de Spearman. p-valor < 0.05 indica correlação significativa."
                     )
 
     # =========================================================
@@ -536,6 +595,11 @@ def main():
     # =========================================================
     elif menu == "Q-Estatística":
         st.subheader("Cálculo de Q-Estatística (Cochrane’s Q para meta-análise)")
+        st.markdown("""
+            **Instruções**:
+            1. Faça upload de um CSV contendo as colunas 'effect' (efeito estimado em cada estudo) e 'variance' (variância desses efeitos).
+            2. A Q-Estatística (Cochrane's Q) serve para verificar se há heterogeneidade significativa entre estudos em meta-análise.
+        """)
         file = st.file_uploader("Upload CSV com efeitos e variâncias", type=["csv"], key="qstat")
         if file:
             df = pd.read_csv(file)
@@ -561,12 +625,18 @@ def main():
     # =========================================================
     elif menu == "Q-Exponencial":
         st.subheader("Ajuste Q-Exponencial (Estatística de Tsallis)")
+        st.markdown("""
+            **Instruções**:
+            1. Faça upload de um CSV contendo ao menos uma coluna numérica (ex.: valores contínuos).
+            2. Selecione a coluna que deseja ajustar a uma distribuição q-exponencial.
+            3. O método tentará ajustar os parâmetros da distribuição com base nos dados.
+        """)
         file = st.file_uploader("Upload CSV com dados para ajuste", type=["csv"], key="qexp")
         if file:
             df = pd.read_csv(file)
             st.dataframe(df.head())
-            col_num = st.selectbox("Selecione a coluna numérica", 
-                                   [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])], key="qexp_col")
+            colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+            col_num = st.selectbox("Selecione a coluna numérica", colunas_num, key="qexp_col")
 
             if st.button("Ajustar Q-Exponencial"):
                 data = df[col_num].dropna().values
