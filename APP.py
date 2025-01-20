@@ -355,25 +355,63 @@ def main():
                 st.pyplot(fig)
 
     # SEÇÃO 9: Two-Way ANOVA
+   
     elif menu == "Two-Way ANOVA":
         st.subheader("Two-Way ANOVA")
-        file = st.file_uploader("Upload de CSV", type=["csv"], key="anova2")
+        st.markdown("""
+            **Orientações para Two-Way ANOVA**:
+            - Faça upload de um arquivo CSV contendo dados.
+            - Selecione uma variável numérica dependente e duas variáveis categóricas como fatores.
+            - O teste ANOVA avaliará se há diferenças significativas na variável numérica entre os grupos definidos pelos fatores e suas interações.
+            - Certifique-se de que seus dados estejam limpos (sem NaN ou Inf) para obter resultados precisos.
+        """)
+        file = st.file_uploader("Upload de CSV para Two-Way ANOVA", type=["csv"], key="anova2")
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
+            st.write("Pré-visualização dos dados:")
+            st.dataframe(df.head())
+
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
             colunas_cat = [c for c in df.columns if df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c])]
-            if len(colunas_cat) >= 2 and colunas_num:
-                col_num = st.selectbox("Variável Numérica", colunas_num)
-                cat1 = st.selectbox("Fator 1", colunas_cat)
-                cat2 = st.selectbox("Fator 2", colunas_cat)
-                if st.button("Executar ANOVA"):
+
+            # Verificações de quantidade de variáveis categóricas e numéricas
+            if len(colunas_cat) < 2:
+                st.warning("É necessário pelo menos duas variáveis categóricas para Two-Way ANOVA.")
+            elif not colunas_num:
+                st.warning("Não há colunas numéricas disponíveis para a variável dependente.")
+            else:
+                col_num = st.selectbox("Selecione a variável numérica dependente", colunas_num)
+                cat1 = st.selectbox("Selecione o Fator 1", colunas_cat)
+                cat2 = st.selectbox("Selecione o Fator 2", colunas_cat)
+
+                if st.button("Executar Two-Way ANOVA"):
                     res = anova_two_way(df, col_num, cat1, cat2)
                     if res is not None:
                         st.dataframe(res)
-                        fig, ax = plt.subplots()
+                        st.markdown("### Interpretação Detalhada da Tabela ANOVA:")
+                        for index, row in res.iterrows():
+                            st.markdown(f"**{index}**:")
+                            st.markdown(f"- Estatística F: {row['F']:.3f}")
+                            st.markdown(f"- p-valor: {row['PR(>F)']:.3f}")
+                            if row['PR(>F)'] < 0.05:
+                                st.markdown(f"- **Significativo**: Indica que {index} tem um efeito significativo sobre {col_num}.")
+                            else:
+                                st.markdown(f"- **Não significativo**: Indica que {index} não tem efeito estatístico significativo sobre {col_num} no nível de 5%.")
+                        
+                        fig, ax = plt.subplots(figsize=(8,6))
                         sns.boxplot(data=df, x=cat1, y=col_num, hue=cat2, ax=ax)
-                        ax.set_title(f"Boxplot de {col_num} por {cat1} e {cat2}")
+                        ax.set_title(f"Distribuição de {col_num} por {cat1} e {cat2}")
+                        ax.set_xlabel(cat1)
+                        ax.set_ylabel(col_num)
                         st.pyplot(fig)
+                        st.markdown(
+                            "**Interpretação do Boxplot**: "
+                            "O boxplot mostra a distribuição de " 
+                            f"{col_num} para cada combinação de níveis de {cat1} e {cat2}. "
+                            "Diferenças nas medianas ou na variabilidade entre os grupos podem refletir os efeitos observados na ANOVA."
+                        )
+                    else:
+                        st.error("A análise Two-Way ANOVA não pôde ser realizada. Verifique os dados e as seleções.")
 
 
     # SEÇÃO 10: Regressões com geração automática de fórmula
