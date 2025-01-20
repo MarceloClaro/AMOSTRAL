@@ -139,7 +139,7 @@ def anova_two_way(data: pd.DataFrame, col_numerica: str, cat1: str, cat2: str):
         return None
 
 # ===================================================
-# 8) 
+# 8) Regressões
 # ===================================================
 def regressao_linear(data: pd.DataFrame, formula: str):
     data_clean = data.replace([np.inf, -np.inf], np.nan).dropna()
@@ -355,7 +355,7 @@ def main():
                 st.pyplot(fig)
 
     # SEÇÃO 9: Two-Way ANOVA
-
+    # SEÇÃO 9: Two-Way ANOVA
     elif menu == "Two-Way ANOVA":
         st.subheader("Two-Way ANOVA")
         st.markdown("""
@@ -482,81 +482,112 @@ def main():
                     else:
                         st.error("A análise Two-Way ANOVA não pôde ser realizada. Verifique seus dados e seleções.")
 
-# SEÇÃO 10: Regressões com geração automática de fórmula
-elif menu == "Regressões":
-    st.subheader("Regressões")
-    st.markdown(r"""
-        **Orientações Gerais para Regressões**:
-        ### Para Leigos de 9 Anos:
-        - **O que é regressão?** Imagine que queremos prever algo com base em outras informações. 
-          Por exemplo, prever a altura de uma planta dependendo da quantidade de água e sol. 
-          A **regressão linear** tenta encontrar uma linha que melhor explique como uma coisa muda 
-          com outra. A **regressão logística** é usada quando queremos prever algo que só pode ser "sim" ou "não" 
-          (como aprovar ou reprovar um aluno).
-        - **Como o aplicativo gera a fórmula?** Você escolhe o que quer prever e os fatores que 
-          acha que influenciam. O aplicativo junta isso em uma equação automaticamente para você.
+    # SEÇÃO 10: Regressões com geração automática de fórmula
+    # SEÇÃO 10: Regressões com geração automática de fórmula
+    elif menu == "Regressões":
+        st.subheader("Regressões")
+        st.markdown(r"""
+            **Orientações Gerais para Regressões**:
+            ### Para Leigos de 9 Anos:
+            - **O que é regressão?** Imagine que queremos prever algo com base em outras informações. 
+              Por exemplo, prever a altura de uma planta dependendo da quantidade de água e sol. 
+              A **regressão linear** tenta encontrar uma linha que melhor explique como uma coisa muda 
+              com outra. A **regressão logística** é usada quando queremos prever algo que só pode ser "sim" ou "não" 
+              (como aprovar ou reprovar um aluno).
+            - **Como o aplicativo gera a fórmula?** Você escolhe o que quer prever e os fatores que 
+              acha que influenciam. O aplicativo junta isso em uma equação automaticamente para você.
 
-        ### Para PhDs:
-        - Esta seção fornece uma interface interativa para especificação automática de fórmulas de regressão, 
-          permitindo a incorporação de variáveis categóricas usando \(C()\).
-        - Explicações metodológicas sobre interpretação de métricas como \(R^2\), p-valores e coeficientes 
-          para regressão linear e logística são fornecidas.
-    """)
+            ### Para PhDs:
+            - Esta seção fornece uma interface interativa para especificação automática de fórmulas de regressão, 
+              permitindo a incorporação de variáveis categóricas usando \(C()\).
+            - Explicações metodológicas sobre interpretação de métricas como \(R^2\), p-valores e coeficientes 
+              para regressão linear e logística são fornecidas.
+        """)
 
-    file = st.file_uploader("Upload de CSV para regressão", type=["csv"], key="reg")
-    if file:
-        df = pd.read_csv(file)
-        numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-        categorical_cols = [c for c in df.columns if not pd.api.types.is_numeric_dtype(df[c])]
+        file = st.file_uploader("Upload de CSV para regressão", type=["csv"], key="reg")
+        if file:
+            df = pd.read_csv(file)
+            numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+            categorical_cols = [c for c in df.columns if not pd.api.types.is_numeric_dtype(df[c])]
 
-        st.markdown("**Selecione a variável dependente:**")
-        dep_var = st.selectbox("Variável Dependente", numeric_cols)
+            st.markdown("**Selecione a variável dependente:**")
+            dep_var = st.selectbox("Variável Dependente", numeric_cols)
 
-        st.markdown("**Selecione as variáveis independentes:**")
-        indep_vars = st.multiselect("Variáveis Independentes", df.columns.tolist())
+            st.markdown("**Selecione as variáveis independentes:**")
+            indep_vars = st.multiselect("Variáveis Independentes", df.columns.tolist())
 
-        terms = []
-        for var in indep_vars:
-            if var in categorical_cols:
-                terms.append(f"C({var})")
-            else:
-                terms.append(var)
-        if dep_var and terms:
-            auto_formula = f"{dep_var} ~ " + " + ".join(terms)
-            st.markdown("**Fórmula gerada automaticamente:**")
-            st.code(auto_formula)
-        else:
-            st.markdown("Por favor, selecione uma variável dependente e variáveis independentes para gerar a fórmula.")
-
-        tipo = st.selectbox("Tipo de Regressão", ["Linear", "Logística"])
-
-        if st.button("Executar Regressão"):
-            if not dep_var or not terms:
-                st.error("Variável dependente ou independentes não definidos. Certifique-se de selecionar as variáveis necessárias.")
-            else:
-                if tipo == "Linear":
-                    # [Código para regressão linear permanece inalterado...]
-                    pass  
+            # Geração automática da fórmula
+            terms = []
+            for var in indep_vars:
+                if var in categorical_cols:
+                    terms.append(f"C({var})")
                 else:
-                    unique_vals = df[dep_var].dropna().unique()
-                    if not set(unique_vals).issubset({0,1}):
-                        st.warning("Para regressão logística, a variável dependente deve ser binária (0 ou 1).")
-                        st.markdown("**Opções de conversão automática:**")
+                    terms.append(var)
+            if dep_var and terms:
+                auto_formula = f"{dep_var} ~ " + " + ".join(terms)
+                st.markdown("**Fórmula gerada automaticamente:**")
+                st.code(auto_formula)
+            else:
+                st.markdown("Por favor, selecione uma variável dependente e variáveis independentes para gerar a fórmula.")
 
-                        # Botão para conversão usando Mediana
-                        if st.button("Converter com Mediana"):
-                            threshold = df[dep_var].median()
-                            st.markdown(f"**Usando a Mediana como limiar:** {threshold:.3f}")
-                            st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Mediana} \\ 0 & \text{caso contrário} \end{cases}")
+            tipo = st.selectbox("Tipo de Regressão", ["Linear", "Logística"])
+
+            if st.button("Executar Regressão"):
+                if not dep_var or not terms:
+                    st.error("Variável dependente ou independentes não definidos. Certifique-se de selecionar as variáveis necessárias.")
+                else:
+                    if tipo == "Linear":
+                        # [Código para regressão linear permanece igual...]
+                        pass  
+                    else:
+                        # Bloco para Regressão Logística
+                        unique_vals = df[dep_var].dropna().unique()
+                        if not set(unique_vals).issubset({0,1}):
+                            st.warning("Para regressão logística, a variável dependente deve ser binária (0 ou 1).")
+                            st.markdown("""
+                                **Escolha um método de binarização para a variável dependente:**
+                                Se a variável dependente não for binária, podemos convertê-la automaticamente.
+                            """)
+                            conversion_method = st.selectbox(
+                                "Escolha o método de binarização",
+                                ["Mediana", "Média", "Percentil 75", "Percentil 25"]
+                            )
+
+                            if conversion_method == "Mediana":
+                                threshold = df[dep_var].median()
+                                st.markdown(f"**Usando a Mediana como limiar:** {threshold:.3f}")
+                                st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Mediana} \\ 0 & \text{caso contrário} \end{cases}")
+                            elif conversion_method == "Média":
+                                threshold = df[dep_var].mean()
+                                st.markdown(f"**Usando a Média como limiar:** {threshold:.3f}")
+                                st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Média} \\ 0 & \text{caso contrário} \end{cases}")
+                            elif conversion_method == "Percentil 75":
+                                threshold = df[dep_var].quantile(0.75)
+                                st.markdown(f"**Usando o Percentil 75 como limiar:** {threshold:.3f}")
+                                st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Percentil }75\% \\ 0 & \text{caso contrário} \end{cases}")
+                            elif conversion_method == "Percentil 25":
+                                threshold = df[dep_var].quantile(0.25)
+                                st.markdown(f"**Usando o Percentil 25 como limiar:** {threshold:.3f}")
+                                st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Percentil }25\% \\ 0 & \text{caso contrário} \end{cases}")
+
                             df[dep_var] = (df[dep_var] > threshold).astype(int)
-                            st.markdown(f"Após conversão, os valores únicos da variável dependente são: {df[dep_var].unique()}")
-                            st.dataframe(df.head())
+                            unique_vals = df[dep_var].unique()
+                            st.markdown(f"Após conversão, os valores únicos da variável dependente são: {unique_vals}")
+                            
+                            st.markdown(f"**Distribuição de {dep_var} após conversão usando {conversion_method}:**")
                             fig, ax = plt.subplots()
                             sns.countplot(x=df[dep_var], ax=ax, palette="pastel")
                             ax.set_title(f"Contagem de valores binários em {dep_var}")
                             ax.set_xlabel(f"Valores de {dep_var} (0 ou 1)")
                             ax.set_ylabel("Frequência")
                             st.pyplot(fig)
+                            
+                            st.markdown("""
+                                **Pronto para executar a regressão logística:**
+                                - A variável dependente agora é binária.
+                                - Pressione novamente o botão **Executar Regressão** para rodar a análise logística com a variável convertida.
+                            """)
+                        else:
                             try:
                                 resultado = regressao_logistica(df, auto_formula)
                                 st.text_area("Saída da Regressão Logística", resultado, height=300)
@@ -568,94 +599,12 @@ elif menu == "Regressões":
                                 st.latex(r"\log\left(\frac{p}{1-p}\right) = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \dots")
                                 st.markdown(r"""
                                     onde \(p\) é a probabilidade de \(Y = 1\).
-                                    - Os coeficientes (\(\beta_i\)) indicam como as variáveis independentes 
-                                      afetam o log-odds do evento.
-                                    - Coeficientes com p-valores menores que 0.05 sugerem efeito 
-                                      significativo na probabilidade do evento.
-                                    - Calcular os odds-ratios (\(\exp(\beta_i)\)) ajuda a entender 
-                                      o impacto prático de cada variável.
+                                    - Os coeficientes (\(\beta_i\)) indicam como as variáveis independentes afetam o log-odds do evento.
+                                    - Coeficientes com p-valores menores que 0.05 sugerem efeito significativo na probabilidade do evento.
+                                    - Calcular os odds-ratios (\(\exp(\beta_i)\)) ajuda a entender o impacto prático de cada variável.
                                 """)
                             except Exception as e:
                                 st.error(f"Erro na regressão logística: {e}")
-
-                        # Botão para conversão usando Média
-                        if st.button("Converter com Média"):
-                            threshold = df[dep_var].mean()
-                            st.markdown(f"**Usando a Média como limiar:** {threshold:.3f}")
-                            st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Média} \\ 0 & \text{caso contrário} \end{cases}")
-                            df[dep_var] = (df[dep_var] > threshold).astype(int)
-                            st.markdown(f"Após conversão, os valores únicos da variável dependente são: {df[dep_var].unique()}")
-                            st.dataframe(df.head())
-                            fig, ax = plt.subplots()
-                            sns.countplot(x=df[dep_var], ax=ax, palette="pastel")
-                            ax.set_title(f"Contagem de valores binários em {dep_var}")
-                            ax.set_xlabel(f"Valores de {dep_var} (0 ou 1)")
-                            ax.set_ylabel("Frequência")
-                            st.pyplot(fig)
-                            try:
-                                resultado = regressao_logistica(df, auto_formula)
-                                st.text_area("Saída da Regressão Logística", resultado, height=300)
-                            except Exception as e:
-                                st.error(f"Erro na regressão logística: {e}")
-
-                        # Botão para conversão usando Percentil 75
-                        if st.button("Converter com Percentil 75"):
-                            threshold = df[dep_var].quantile(0.75)
-                            st.markdown(f"**Usando o Percentil 75 como limiar:** {threshold:.3f}")
-                            st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Percentil }75\% \\ 0 & \text{caso contrário} \end{cases}")
-                            df[dep_var] = (df[dep_var] > threshold).astype(int)
-                            st.markdown(f"Após conversão, os valores únicos da variável dependente são: {df[dep_var].unique()}")
-                            st.dataframe(df.head())
-                            fig, ax = plt.subplots()
-                            sns.countplot(x=df[dep_var], ax=ax, palette="pastel")
-                            ax.set_title(f"Contagem de valores binários em {dep_var}")
-                            ax.set_xlabel(f"Valores de {dep_var} (0 ou 1)")
-                            ax.set_ylabel("Frequência")
-                            st.pyplot(fig)
-                            try:
-                                resultado = regressao_logistica(df, auto_formula)
-                                st.text_area("Saída da Regressão Logística", resultado, height=300)
-                            except Exception as e:
-                                st.error(f"Erro na regressão logística: {e}")
-
-                        # Botão para conversão usando Percentil 25
-                        if st.button("Converter com Percentil 25"):
-                            threshold = df[dep_var].quantile(0.25)
-                            st.markdown(f"**Usando o Percentil 25 como limiar:** {threshold:.3f}")
-                            st.latex(r"Y' = \begin{cases} 1 & \text{se } Y > \text{Percentil }25\% \\ 0 & \text{caso contrário} \end{cases}")
-                            df[dep_var] = (df[dep_var] > threshold).astype(int)
-                            st.markdown(f"Após conversão, os valores únicos da variável dependente são: {df[dep_var].unique()}")
-                            st.dataframe(df.head())
-                            fig, ax = plt.subplots()
-                            sns.countplot(x=df[dep_var], ax=ax, palette="pastel")
-                            ax.set_title(f"Contagem de valores binários em {dep_var}")
-                            ax.set_xlabel(f"Valores de {dep_var} (0 ou 1)")
-                            ax.set_ylabel("Frequência")
-                            st.pyplot(fig)
-                            try:
-                                resultado = regressao_logistica(df, auto_formula)
-                                st.text_area("Saída da Regressão Logística", resultado, height=300)
-                            except Exception as e:
-                                st.error(f"Erro na regressão logística: {e}")
-
-                    else:
-                        try:
-                            resultado = regressao_logistica(df, auto_formula)
-                            st.text_area("Saída da Regressão Logística", resultado, height=300)
-                            st.markdown(r"""
-                                **Interpretação da Regressão Logística**:
-                                - A regressão logística estima a probabilidade de ocorrência de um evento (valor 1).
-                                - A fórmula geral é:
-                            """)
-                            st.latex(r"\log\left(\frac{p}{1-p}\right) = \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \dots")
-                            st.markdown(r"""
-                                onde \(p\) é a probabilidade de \(Y = 1\).
-                                - Os coeficientes (\(\beta_i\)) indicam como as variáveis independentes afetam o log-odds do evento.
-                                - Coeficientes com p-valores menores que 0.05 sugerem efeito significativo na probabilidade do evento.
-                                - Calcular os odds-ratios (\(\exp(\beta_i)\)) ajuda a entender o impacto prático de cada variável.
-                            """)
-                        except Exception as e:
-                            st.error(f"Erro na regressão logística: {e}")
 
     # SEÇÃO 11: Teste de Hipótese
     elif menu == "Teste de Hipótese":
