@@ -1,1 +1,5 @@
-
+streamlit 
+scipy 
+statsmodels 
+pandas 
+numpy
