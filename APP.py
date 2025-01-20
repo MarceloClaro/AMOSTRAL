@@ -375,21 +375,47 @@ def main():
                         ax.set_title(f"Boxplot de {col_num} por {cat1} e {cat2}")
                         st.pyplot(fig)
 
-    # SEÇÃO 10: Regressões
+
+    # SEÇÃO 10: Regressões com geração automática de fórmula
     elif menu == "Regressões":
         st.subheader("Regressões")
-        file = st.file_uploader("Upload de CSV", type=["csv"], key="reg")
+        file = st.file_uploader("Upload de CSV para regressão", type=["csv"], key="reg")
         if file:
             df = pd.read_csv(file)
-            formula = st.text_input("Fórmula (ex.: 'Y ~ X + C(Grupo)')", "")
-            tipo = st.selectbox("Tipo de Regressão", ["Linear", "Logística"])
-            if st.button("Rodar Regressão"):
-                if tipo == "Linear":
-                    resultado = regressao_linear(df, formula)
-                    st.text_area("Saída da Regressão Linear", resultado, height=300)
+            numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+            categorical_cols = [c for c in df.columns if not pd.api.types.is_numeric_dtype(df[c])]
+
+            st.markdown("Selecione a variável dependente:")
+            dep_var = st.selectbox("Variável Dependente", numeric_cols)
+
+            st.markdown("Selecione as variáveis independentes:")
+            indep_vars = st.multiselect("Variáveis Independentes", df.columns.tolist())
+
+            # Gera fórmula automaticamente
+            terms = []
+            for var in indep_vars:
+                if var in categorical_cols:
+                    terms.append(f"C({var})")
                 else:
-                    resultado = regressao_logistica(df, formula)
-                    st.text_area("Saída da Regressão Logística", resultado, height=300)
+                    terms.append(var)
+            if dep_var and terms:
+                auto_formula = f"{dep_var} ~ " + " + ".join(terms)
+                st.write(f"Fórmula gerada automaticamente: {auto_formula}")
+            else:
+                st.write("Por favor, selecione variáveis para gerar a fórmula.")
+
+            tipo = st.selectbox("Tipo de Regressão", ["Linear", "Logística"])
+            if st.button("Executar Regressão"):
+                if not dep_var or not terms:
+                    st.error("Variável dependente ou independentes não definidos.")
+                else:
+                    if tipo == "Linear":
+                        resultado = regressao_linear(df, auto_formula)
+                        st.text_area("Saída da Regressão Linear", resultado, height=300)
+                    else:
+                        resultado = regressao_logistica(df, auto_formula)
+                        st.text_area("Saída da Regressão Logística", resultado, height=300)
+                    st.markdown("**Interpretação**: Verifique os coeficientes e p-valores nos resultados da regressão.")
 
     # SEÇÃO 11: Teste de Hipótese
     elif menu == "Teste de Hipótese":
