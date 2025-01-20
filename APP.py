@@ -355,22 +355,24 @@ def main():
                 st.pyplot(fig)
 
     # SEÇÃO 9: Two-Way ANOVA
+    # SEÇÃO 9: Two-Way ANOVA
     elif menu == "Two-Way ANOVA":
         st.subheader("Two-Way ANOVA")
         st.markdown("""
             **Orientações para Two-Way ANOVA**:
             - Faça upload de um arquivo CSV contendo seus dados.
             - Selecione uma variável numérica dependente e duas variáveis categóricas como fatores.
-            - A Two-Way ANOVA verifica se existem diferenças significativas nas médias da variável dependente entre 
-              os grupos formados pelos fatores, incluindo também a interação entre esses fatores.
+            - A Two-Way ANOVA verifica se existem diferenças significativas na média da variável dependente entre 
+              os grupos formados pelos fatores, incluindo também a interação entre eles.
             - O teste fornece uma tabela com estatísticas F e p-valores para cada fator e para a interação, 
               ajudando a identificar quais efeitos são estatisticamente significativos.
             - O nível de significância padrão é 5%. Isso significa que há uma chance de 5% de concluir 
-              que um efeito existe quando, na verdade, ele não existe (erro tipo I). Porém, você pode 
-              ajustar esse nível conforme sua necessidade.
-            - Garanta que seus dados estejam limpos, sem valores ausentes (NaN) ou infinitos (Inf), para 
-              obter resultados precisos.
+              que um efeito existe quando, na verdade, ele não existe (erro tipo I). 
+            - Você pode ajustar esse nível conforme sua necessidade para ser mais rigoroso ou mais flexível.
+            - Certifique-se de que seus dados estejam limpos, sem valores ausentes (NaN) ou infinitos (Inf), 
+              para obter resultados precisos.
         """)
+
         st.markdown("#### Fórmula Geral para Two-Way ANOVA:")
         st.latex(r"Y_{ijk} = \mu + \alpha_i + \beta_j + (\alpha\beta)_{ij} + \epsilon_{ijk}")
         st.markdown(r"""
@@ -388,12 +390,25 @@ def main():
             O nível de significância é o limite que definimos para decidir se um resultado é estatisticamente significativo. 
             Um nível de 5% (0,05) é tradicionalmente usado porque oferece um bom equilíbrio entre 
             detectar efeitos reais e evitar falsos positivos. Em termos simples, ao usar 5%, 
-            aceitamos uma chance de 5% de identificar um efeito que não existe de fato.  
-            Usuários podem ajustar esse valor se quiserem ser mais rigorosos (por exemplo, 1%) 
-            ou mais flexíveis (por exemplo, 10%).
+            aceitamos uma chance de 5% de identificar um efeito que não existe de fato.
         """)
 
-        # Upload de arquivo
+        st.markdown("""
+            **Por que ajustar o nível de significância?**
+            - Ao diminuir o nível de significância (por exemplo, de 5% para 1%), nos tornamos mais rigorosos. 
+              Isso significa que exigimos mais evidências antes de considerar um efeito como significativo, 
+              reduzindo a chance de falsos positivos, mas aumentando a chance de perder efeitos reais (falso negativo).
+            - Ao aumentar o nível de significância (por exemplo, de 5% para 10%), estamos mais flexíveis.
+              Isso facilita a detecção de efeitos, mas aumenta a chance de obter falsos positivos.
+        """)
+
+        # Ajuste do nível de significância
+        significance_level = st.slider(
+            "Nível de significância (%) para interpretação", 
+            min_value=1, max_value=10, value=5
+        ) / 100.0
+        st.markdown(f"**Nível de significância selecionado: {significance_level*100:.0f}%**")
+
         file = st.file_uploader("Upload de CSV para Two-Way ANOVA", type=["csv"], key="anova2")
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
@@ -412,10 +427,6 @@ def main():
                 col_num = st.selectbox("Selecione a variável numérica dependente", colunas_num)
                 cat1 = st.selectbox("Selecione o Fator 1", colunas_cat)
                 cat2 = st.selectbox("Selecione o Fator 2", colunas_cat)
-
-                # Permitir ajuste do nível de significância
-                significance_level = st.slider("Nível de significância (%) para interpretação", 1, 10, 5) / 100.0
-                st.markdown(f"**Nível de significância selecionado: {significance_level*100:.0f}%**")
 
                 if st.button("Executar Two-Way ANOVA"):
                     res = anova_two_way(df, col_num, cat1, cat2)
