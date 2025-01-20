@@ -130,9 +130,22 @@ def teste_kruskal(data: pd.DataFrame, col_numerica: str, col_categ: str):
 # 7) Two-Way ANOVA
 # ===================================================
 def anova_two_way(data: pd.DataFrame, col_numerica: str, cat1: str, cat2: str):
-    formula = f"{col_numerica} ~ C({cat1}) + C({cat2}) + C({cat1}):C({cat2})"
+    """
+    Realiza Two-Way ANOVA considerando col_numerica como variável dependente
+    e cat1, cat2 como fatores (categóricos).
+    
+    Retorna a tabela ANOVA se não houver problemas com Inf/NaN.
+    Caso contrário, avisa o usuário sobre dados ausentes ou inválidos.
+    """
+    # Remove linhas com NaN ou Inf
+    data_clean = data[[col_numerica, cat1, cat2]].replace([np.inf, -np.inf], np.nan).dropna()
+    if data_clean.empty:
+        st.error("Todos os dados são NaN ou Inf. Verifique seu dataset.")
+        return None
+
     try:
-        modelo = ols(formula, data=data).fit()
+        formula = f"{col_numerica} ~ C({cat1}) + C({cat2}) + C({cat1}):C({cat2})"
+        modelo = ols(formula, data=data_clean).fit()
         anova_table = sm.stats.anova_lm(modelo, typ=2)
         return anova_table
     except Exception as e:
@@ -143,16 +156,30 @@ def anova_two_way(data: pd.DataFrame, col_numerica: str, cat1: str, cat2: str):
 # 8) Regressões
 # ===================================================
 def regressao_linear(data: pd.DataFrame, formula: str):
+    """
+    Regressão linear usando statsmodels. 
+    Remove valores Inf/NaN antes de ajustar o modelo.
+    """
+    data_clean = data.replace([np.inf, -np.inf], np.nan).dropna()
+    if data_clean.empty:
+        return "Erro: dados inválidos (NaN/Inf). Verifique limpeza dos dados."
     try:
-        modelo = ols(formula, data=data).fit()
+        modelo = ols(formula, data=data_clean).fit()
         return modelo.summary().as_text()
     except Exception as e:
         return f"Erro na regressão linear: {e}"
 
 def regressao_logistica(data: pd.DataFrame, formula: str):
+    """
+    Regressão logística usando statsmodels. 
+    Remove valores Inf/NaN antes de ajustar o modelo.
+    """
     import statsmodels.formula.api as smf
+    data_clean = data.replace([np.inf, -np.inf], np.nan).dropna()
+    if data_clean.empty:
+        return "Erro: dados inválidos (NaN/Inf). Verifique limpeza dos dados."
     try:
-        modelo = smf.logit(formula, data=data).fit(disp=False)
+        modelo = smf.logit(formula, data=data_clean).fit(disp=False)
         return modelo.summary().as_text()
     except Exception as e:
         return f"Erro na regressão logística: {e}"
@@ -175,10 +202,17 @@ def q_exponential_pdf(x, lam, q):
     return (2 - q) * lam * np.power((1 - (1-q)*lam*x), 1/(1-q))
 
 def fit_q_exponential(data):
-    initial_guess = [0.1, 1.2]
-    counts, bins = np.histogram(data, bins=30, density=True)
+    """
+    Ajusta distribuição q-exponencial usando curve_fit, 
+    removendo Inf/NaN antes de estimar parâmetros.
+    """
+    data_clean = data[~np.isnan(data) & ~np.isinf(data)]
+    if len(data_clean) == 0:
+        raise ValueError("Dados inválidos: somente valores Inf/NaN encontrados.")
+    counts, bins = np.histogram(data_clean, bins=30, density=True)
     xvals = 0.5*(bins[1:] + bins[:-1])
     yvals = counts
+    initial_guess = [0.1, 1.2]
     popt, _ = curve_fit(q_exponential_pdf, xvals, yvals, p0=initial_guess, maxfev=10000)
     return popt  # lam, q
 
@@ -230,9 +264,8 @@ def main():
 
         st.markdown("""
         **Interpretação**:
-        - O dataset inclui colunas de **Flow**, **Salinity**, **pH**, íons (Calcium, Magnesium, Sulfate, Chloride),
-          bem como **informações geológicas** (Geological_Formation), **climáticas** (Climate_Type) e **geográficas** (Latitude, Longitude).
-        - Isso pode servir como teste para análises exploratórias, regressões ou qualquer método estatístico desejado.
+        - Este dataset possui colunas numéricas (Flow, Salinity, pH, etc.) e colunas categóricas (Geological_Formation, Climate_Type).
+        - Caso seu dataset real tenha valores ausentes (NaN) ou infinitos (Inf), considere limpar ou tratar esses dados antes das análises.
         """)
 
     # =========================================================
@@ -250,12 +283,12 @@ def main():
             if resultado:
                 st.success(f"Tamanho amostral recomendado: {resultado}")
                 st.markdown(
-                    f"**Interpretação**: Para uma população de {populacao} indivíduos, com nível de confiança de {nivel_confianca}% "
-                    f"e margem de erro de {margem_erro}%, assumindo proporção verdadeira por volta de {p_est}, "
-                    f"o tamanho de amostra recomendado é {resultado} para alcançar a precisão desejada."
+                    f"**Interpretação**: Em uma população de {populacao} indivíduos, com nível de confiança de {nivel_confianca}% "
+                    f"e margem de erro de {margem_erro}%, assumindo que a proporção verdadeira seja de aproximadamente {p_est}, "
+                    f"são necessários {resultado} respondentes para obter resultados com a precisão desejada."
                 )
             else:
-                st.error("Erro no cálculo. Verifique os parâmetros informados.")
+                st.error("Erro no cálculo. Verifique os parâmetros informados (margem de erro não pode ser 0%).")
 
     # =========================================================
     # SEÇÃO 3: Cálculo de Amostragem - Média
@@ -274,10 +307,10 @@ def main():
                 st.markdown(
                     f"**Interpretação**: Para uma população de {populacao} indivíduos, nível de confiança de {nivel_confianca}%, "
                     f"margem de erro de ±{margem_erro_abs} e desvio-padrão de {desvio_padrao}, "
-                    f"uma amostra de {resultado} elementos é indicada para estimar a média com a precisão desejada."
+                    f"uma amostra de {resultado} elementos ajuda a estimar a média com a precisão desejada."
                 )
             else:
-                st.error("Erro no cálculo. Verifique os parâmetros informados.")
+                st.error("Erro no cálculo. Verifique se a margem de erro não é zero ou negativa.")
 
     # =========================================================
     # SEÇÃO 4: Intervalo de Confiança - Proporção
@@ -292,8 +325,8 @@ def main():
             ic = intervalo_confianca_proporcao(n, confianca, p_obs)
             st.info(f"Intervalo de Confiança Aproximado: {ic[0]*100:.2f}% a {ic[1]*100:.2f}%")
             st.markdown(
-                f"**Interpretação**: Com {confianca}% de confiança, se a proporção amostral for {p_obs*100:.2f}%, "
-                f"o valor real da proporção populacional deve estar entre {ic[0]*100:.2f}% e {ic[1]*100:.2f}%."
+                f"**Interpretação**: Se a proporção amostral é {p_obs*100:.2f}%, com {confianca}% de confiança, "
+                f"o valor real da proporção na população está entre {ic[0]*100:.2f}% e {ic[1]*100:.2f}%."
             )
 
     # =========================================================
@@ -310,9 +343,8 @@ def main():
             ic = intervalo_confianca_media(n, confianca, media_amostral, desvio_padrao)
             st.info(f"Intervalo de Confiança Aproximado: {ic[0]:.2f} a {ic[1]:.2f}")
             st.markdown(
-                f"**Interpretação**: Para uma amostra de {n} itens, média de {media_amostral}, "
-                f"desvio-padrão {desvio_padrao} e {confianca}% de confiança, "
-                f"o intervalo ({ic[0]:.2f}, {ic[1]:.2f}) abrange o valor provável da média populacional."
+                f"**Interpretação**: Dada uma amostra de {n} itens, média {media_amostral} e desvio-padrão {desvio_padrao}, "
+                f"com {confianca}% de confiança, a média populacional deve situar-se entre {ic[0]:.2f} e {ic[1]:.2f}."
             )
 
     # =========================================================
@@ -321,10 +353,8 @@ def main():
     elif menu == "Estatísticas Descritivas":
         st.subheader("Estatísticas Descritivas")
         st.markdown("""
-            **Instruções**:
-            1. Faça upload de um arquivo CSV.
-            2. Selecione as colunas numéricas que deseja analisar (colunas que contêm valores decimais ou inteiros).
-            3. As colunas com valores de texto ou categorias não devem ser selecionadas para estatísticas descritivas.
+            **Dica**: Se houver valores ausentes ou infinitos no seu dataset, 
+            considere removê-los ou tratá-los antes de gerar estatísticas confiáveis.
         """)
         file = st.file_uploader("Faça upload de um arquivo CSV", type=["csv"], key="desc")
         if file:
@@ -337,11 +367,11 @@ def main():
                 default=[c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
             )
             if colunas_num:
-                desc = estatisticas_descritivas(df[colunas_num])
+                desc = estatisticas_descritivas(df[colunas_num].replace([np.inf, -np.inf], np.nan).dropna())
                 st.write(desc)
                 st.markdown(
                     "**Interpretação**: As métricas incluem média, desvio padrão, valor mínimo, valor máximo e quartis. "
-                    "Elas descrevem a tendência central e a dispersão dos dados."
+                    "Verifique se a quantidade de linhas após remover NaN/Inf é suficiente para uma análise robusta."
                 )
 
     # =========================================================
@@ -349,70 +379,65 @@ def main():
     # =========================================================
     elif menu == "Testes de Normalidade":
         st.subheader("Testes de Normalidade")
-        st.markdown("""
-            **Instruções**:
-            1. Faça upload de um CSV que contenha ao menos uma coluna numérica (ex.: colunas de valores contínuos).
-            2. Selecione a coluna numérica para verificar se os dados seguem distribuição normal.
-        """)
         file = st.file_uploader("Upload CSV para testes de normalidade", type=["csv"], key="normal")
         if file:
-            df = pd.read_csv(file)
+            df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
             st.write("Exemplo de dados:")
             st.dataframe(df.head())
-            # Filtra apenas colunas numéricas
+
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
             coluna = st.selectbox("Selecione a coluna numérica para teste de normalidade", colunas_num)
 
             if st.button("Executar Shapiro-Wilk"):
-                stat, p = teste_shapiro(df[coluna])
-                st.write(f"Shapiro-Wilk: Estatística={stat:.4f}, p-valor={p:.4f}")
-                if p < 0.05:
-                    st.warning("Resultado sugere que a distribuição não é normal ao nível de 5%.")
+                data_series = df[coluna].dropna()
+                if data_series.empty:
+                    st.warning("Nenhum dado válido após remover NaN/Inf.")
                 else:
-                    st.info("Não há evidência para rejeitar a normalidade ao nível de 5%.")
-                st.markdown(
-                    "**Interpretação**: p-valor < 0.05 indica que a amostra provavelmente não segue distribuição normal."
-                )
+                    stat, p = teste_shapiro(data_series)
+                    st.write(f"Shapiro-Wilk: Estatística={stat:.4f}, p-valor={p:.4f}")
+                    if p < 0.05:
+                        st.warning("Resultado sugere que a distribuição não é normal ao nível de 5%.")
+                    else:
+                        st.info("Não há evidência para rejeitar a normalidade ao nível de 5%.")
+                    st.markdown(
+                        "**Interpretação**: Um p-valor < 0.05 indica que seus dados não seguem uma distribuição normal."
+                    )
 
             if st.button("Executar Kolmogorov-Smirnov"):
-                stat, p = teste_ks(df[coluna])
-                st.write(f"K-S Test: Estatística={stat:.4f}, p-valor={p:.4f}")
-                if p < 0.05:
-                    st.warning("Resultado sugere que a distribuição não é normal ao nível de 5%.")
+                data_series = df[coluna].dropna()
+                if data_series.empty:
+                    st.warning("Nenhum dado válido após remover NaN/Inf.")
                 else:
-                    st.info("Não há evidência para rejeitar a normalidade ao nível de 5%.")
-                st.markdown(
-                    "**Interpretação**: p-valor < 0.05 sugere que a amostra se desvia de uma distribuição normal."
-                )
+                    stat, p = teste_ks(data_series)
+                    st.write(f"K-S Test: Estatística={stat:.4f}, p-valor={p:.4f}")
+                    if p < 0.05:
+                        st.warning("Resultado sugere que a distribuição não é normal ao nível de 5%.")
+                    else:
+                        st.info("Não há evidência para rejeitar a normalidade ao nível de 5%.")
+                    st.markdown(
+                        "**Interpretação**: Um p-valor < 0.05 indica desvio significativo de uma distribuição normal."
+                    )
 
     # =========================================================
     # SEÇÃO 8: Testes Não-Paramétricos
     # =========================================================
     elif menu == "Testes Não-Paramétricos":
         st.subheader("Testes Não-Paramétricos")
-        st.markdown("""
-            **Instruções**:
-            1. Faça upload de um CSV.
-            2. Identifique qual a **coluna numérica** (ex.: valores contínuos).
-            3. Escolha a **coluna categórica** (ex.: grupos representados por texto ou 'category').
-            - Para Mann-Whitney: a coluna categórica deve conter **exatamente 2 grupos**.
-            - Para Kruskal-Wallis: pode conter 3 ou mais grupos.
-        """)
         file = st.file_uploader("Upload CSV para testes não-paramétricos", type=["csv"], key="np")
         if file:
-            df = pd.read_csv(file)
-            st.write("Exemplo de dados:")
+            df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
+            st.write("Exemplo de dados (após remoção de Inf):")
             st.dataframe(df.head())
 
-            # Identifica possíveis colunas
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
             colunas_cat = [c for c in df.columns if (df[c].dtype == 'object' or pd.api.types.is_categorical_dtype(df[c]))]
 
             col_num = st.selectbox("Coluna Numérica (valor contínuo)", colunas_num)
-            col_cat = st.selectbox("Coluna Categórica (ex.: grupos, texto ou category)", colunas_cat)
+            col_cat = st.selectbox("Coluna Categórica (grupos)", colunas_cat)
 
             if st.button("Executar Mann-Whitney"):
-                stat, p = teste_mannwhitney(df, col_num, col_cat)
+                data_f = df[[col_num, col_cat]].dropna()
+                stat, p = teste_mannwhitney(data_f, col_num, col_cat)
                 if stat is not None:
                     st.write(f"Mann-Whitney: Estatística={stat:.4f}, p-valor={p:.4f}")
                     if p < 0.05:
@@ -420,22 +445,21 @@ def main():
                     else:
                         st.info("Não há diferença significativa entre os grupos ao nível de 5%.")
                     st.markdown(
-                        "**Interpretação**: O teste Mann-Whitney avalia se duas amostras independentes "
-                        "têm distribuições (medianas) diferentes."
+                        "**Interpretação**: O teste Mann-Whitney avalia diferenças na distribuição/mediana entre 2 grupos."
                     )
                 else:
-                    st.error("Mann-Whitney requer exatamente 2 grupos na coluna categórica.")
+                    st.error("Verifique se há exatamente 2 grupos na coluna categórica selecionada.")
 
             if st.button("Executar Kruskal-Wallis"):
-                stat, p = teste_kruskal(df, col_num, col_cat)
+                data_f = df[[col_num, col_cat]].dropna()
+                stat, p = teste_kruskal(data_f, col_num, col_cat)
                 st.write(f"Kruskal-Wallis: Estatística={stat:.4f}, p-valor={p:.4f}")
                 if p < 0.05:
                     st.success("Diferença significativa entre os grupos ao nível de 5%.")
                 else:
                     st.info("Não há diferença significativa entre os grupos ao nível de 5%.")
                 st.markdown(
-                    "**Interpretação**: O teste Kruskal-Wallis compara três ou mais grupos sem pressupor normalidade. "
-                    "p-valor < 0.05 indica que ao menos um grupo difere dos demais."
+                    "**Interpretação**: O teste Kruskal-Wallis compara 3 ou mais grupos sem pressupor normalidade."
                 )
 
     # =========================================================
@@ -444,15 +468,16 @@ def main():
     elif menu == "Two-Way ANOVA":
         st.subheader("Two-Way ANOVA")
         st.markdown("""
-            **Instruções**:
-            1. Faça upload de um CSV.
-            2. Selecione a **coluna numérica** (valor contínuo) como variável dependente.
-            3. Escolha duas **colunas categóricas** (ex.: fator 1 e fator 2, que representem grupos, como texto ou category).
+            **Orientação**:
+            - Selecione uma coluna numérica como variável dependente.
+            - Selecione duas colunas categóricas (fatores), cada uma representando grupos/texto.
+            - Caso apareça erro de Inf/NaN, verifique se os dados possuem valores ausentes ou infinitos 
+              e considere limpá-los antes do teste.
         """)
         file = st.file_uploader("Upload CSV para Two-Way ANOVA", type=["csv"], key="anova2")
         if file:
-            df = pd.read_csv(file)
-            st.write("Exemplo de dados:")
+            df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
+            st.write("Exemplo de dados (após remoção de Inf):")
             st.dataframe(df.head())
 
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
@@ -467,8 +492,8 @@ def main():
                 if anova_table is not None:
                     st.write(anova_table)
                     st.markdown(
-                        "**Interpretação**: Cada linha representa o efeito de um fator ou da interação entre fatores. "
-                        "Verifique os p-valores para saber se há efeitos significativos na variável numérica."
+                        "**Interpretação**: A Tabela ANOVA mostra se cada fator (cat1, cat2) e a interação deles "
+                        "afetam significativamente a variável numérica. p-valor < 0.05 indica efeito significativo."
                     )
 
     # =========================================================
@@ -478,25 +503,23 @@ def main():
         st.subheader("Regressões")
         st.markdown("""
             **Instruções**:
-            1. Faça upload de um CSV.
-            2. Observe quais colunas são numéricas (variáveis quantitativas) e categóricas (grupos, texto).
-            3. Monte a fórmula no estilo `VariavelDependente ~ VariavelIndependente1 + VariavelIndependente2`.
-               - Para variáveis categóricas, normalmente o modelo as interpreta como fatores automaticamente (ex.: `C(Coluna)` se precisar explicitar).
-            4. Selecione o tipo de regressão (Linear ou Logística).
+            - Faça upload de um CSV.
+            - Para regressão linear, use fórmula do tipo `Y ~ X1 + X2`.
+            - Para regressão logística, as variáveis dependentes precisam ser 0 ou 1 (binária). 
+              Use fórmula como `Y ~ X1 + X2`.
+            - Caso seu dataset tenha NaN/Inf, eles serão removidos antes de ajustar o modelo.
         """)
         file = st.file_uploader("Upload CSV para regressões", type=["csv"], key="reg")
         if file:
             df = pd.read_csv(file)
-            st.write("Exemplo de dados:")
+            st.write("Exemplo de dados (antes de remoção de Inf/NaN):")
             st.dataframe(df.head())
-
-            st.markdown("Informe a fórmula. Ex.: `VariavelDependente ~ VariavelIndependente1 + VariavelIndependente2`")
-            formula = st.text_input("Fórmula", value="")
+            formula = st.text_input("Fórmula (ex.: 'VariavelDependente ~ VariavelIndependente1 + C(VariavelCat)')", value="")
             tipo_regressao = st.selectbox("Tipo de Regressão", ["Linear", "Logística"])
 
             if st.button("Executar Regressão"):
                 if not formula:
-                    st.warning("Insira uma fórmula para o modelo.")
+                    st.warning("Insira uma fórmula válida para o modelo.")
                 else:
                     if tipo_regressao == "Linear":
                         resultado = regressao_linear(df, formula)
@@ -504,9 +527,9 @@ def main():
                         resultado = regressao_logistica(df, formula)
                     st.text_area("Resultado da Regressão", resultado, height=300)
                     st.markdown(
-                        "**Interpretação**: Observe coeficientes, p-valores e estatísticas de ajuste. "
-                        "Na regressão linear, o R² indica quanto o modelo explica da variação da variável dependente. "
-                        "Na logística, verifique os odds-ratios (exp(coef)) e seus intervalos de confiança."
+                        "**Interpretação**: Verifique coeficientes, p-valores e estatísticas de ajuste. "
+                        "Na regressão linear, o R² indica proporção da variação explicada; "
+                        "na logística, observe p-valores dos coeficientes e odds-ratios."
                     )
 
     # =========================================================
@@ -514,15 +537,9 @@ def main():
     # =========================================================
     elif menu == "Teste de Hipótese":
         st.subheader("Teste de Hipótese (One-Sample t-test)")
-        st.markdown("""
-            **Instruções**:
-            1. Faça upload de um CSV.
-            2. Selecione a **coluna numérica** (ex.: valores contínuos).
-            3. Defina uma média hipotética (H0) para comparar.
-        """)
         file = st.file_uploader("Upload CSV para teste de hipótese", type=["csv"], key="hipo")
         if file:
-            df = pd.read_csv(file)
+            df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
             st.dataframe(df.head())
 
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
@@ -531,63 +548,67 @@ def main():
 
             if st.button("Executar One-Sample t-test"):
                 data_series = df[col_num].dropna()
-                t_stat, p_val = stats.ttest_1samp(data_series, popmean=media_hipotetica)
-                st.write(f"Estatística t: {t_stat:.4f}, p-valor: {p_val:.4f}")
-                if p_val < 0.05:
-                    st.success("Rejeitamos H0 ao nível de 5%.")
-                    st.markdown(
-                        "**Interpretação**: O p-valor < 0.05 sugere que a média amostral difere significativamente "
-                        "da média hipotética definida em H0."
-                    )
+                if data_series.empty:
+                    st.warning("Sem dados válidos após remover NaN/Inf.")
                 else:
-                    st.info("Não rejeitamos H0 ao nível de 5%.")
-                    st.markdown(
-                        "**Interpretação**: Não há evidências para afirmar que a média amostral seja diferente "
-                        "da média hipotética (H0)."
-                    )
+                    t_stat, p_val = stats.ttest_1samp(data_series, popmean=media_hipotetica)
+                    st.write(f"Estatística t: {t_stat:.4f}, p-valor: {p_val:.4f}")
+                    if p_val < 0.05:
+                        st.success("Rejeitamos H0 ao nível de 5%.")
+                        st.markdown(
+                            "**Interpretação**: A média observada difere significativamente da média hipotética. "
+                            "p-valor < 0.05 sugere diferença estatística."
+                        )
+                    else:
+                        st.info("Não rejeitamos H0 ao nível de 5%.")
+                        st.markdown(
+                            "**Interpretação**: Não há evidência suficiente para concluir que a média difere de H0."
+                        )
 
     # =========================================================
     # SEÇÃO 12: Testes de Correlação
     # =========================================================
     elif menu == "Testes de Correlação":
         st.subheader("Testes de Correlação (Pearson, Spearman, Kendall)")
-        st.markdown("""
-            **Instruções**:
-            1. Faça upload de um CSV que contenha ao menos duas colunas numéricas.
-            2. Selecione a primeira e a segunda coluna numérica para avaliar a correlação.
-            3. Escolha o teste desejado (Pearson, Spearman ou Kendall).
-        """)
         file = st.file_uploader("Upload CSV para correlação", type=["csv"], key="corr")
         if file:
-            df = pd.read_csv(file)
+            df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
             st.write("Exemplo de dados:")
             st.dataframe(df.head())
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
             if len(colunas_num) < 2:
-                st.warning("O arquivo deve conter ao menos duas colunas numéricas para correlação.")
+                st.warning("É necessário ao menos duas colunas numéricas para analisar correlação.")
             else:
                 col_x = st.selectbox("Selecione a primeira variável (X)", colunas_num, key="corr_x")
                 col_y = st.selectbox("Selecione a segunda variável (Y)", colunas_num, key="corr_y")
 
                 if st.button("Executar Pearson"):
-                    corr, p_val = stats.pearsonr(df[col_x].dropna(), df[col_y].dropna())
+                    data_x = df[col_x].dropna()
+                    data_y = df[col_y].dropna()
+                    corr, p_val = stats.pearsonr(data_x, data_y)
                     st.write(f"**Correlação de Pearson**: {corr:.4f}, p-valor={p_val:.4f}")
                     st.markdown(
-                        "**Interpretação (Pearson)**: Correlação linear. p-valor < 0.05 indica correlação linear significativa."
+                        "**Interpretação (Pearson)**: Mede correlação linear. p-valor < 0.05 indica relação linear significativa."
                     )
 
                 if st.button("Executar Spearman"):
-                    corr, p_val = stats.spearmanr(df[col_x].dropna(), df[col_y].dropna())
+                    data_x = df[col_x].dropna()
+                    data_y = df[col_y].dropna()
+                    corr, p_val = stats.spearmanr(data_x, data_y)
                     st.write(f"**Correlação de Spearman**: {corr:.4f}, p-valor={p_val:.4f}")
                     st.markdown(
-                        "**Interpretação (Spearman)**: Correlação baseada em ranques (monotônica). p-valor < 0.05 indica correlação significativa."
+                        "**Interpretação (Spearman)**: Mede correlação baseada em ranques. "
+                        "p-valor < 0.05 indica correlação monotônica significativa."
                     )
 
                 if st.button("Executar Kendall"):
-                    corr, p_val = stats.kendalltau(df[col_x].dropna(), df[col_y].dropna())
+                    data_x = df[col_x].dropna()
+                    data_y = df[col_y].dropna()
+                    corr, p_val = stats.kendalltau(data_x, data_y)
                     st.write(f"**Correlação de Kendall**: {corr:.4f}, p-valor={p_val:.4f}")
                     st.markdown(
-                        "**Interpretação (Kendall)**: Também ranque, mas abordagem diferente de Spearman. p-valor < 0.05 indica correlação significativa."
+                        "**Interpretação (Kendall)**: Também usa ranques, mas com abordagem diferente de Spearman. "
+                        "p-valor < 0.05 indica correlação significativa."
                     )
 
     # =========================================================
@@ -596,17 +617,19 @@ def main():
     elif menu == "Q-Estatística":
         st.subheader("Cálculo de Q-Estatística (Cochrane’s Q para meta-análise)")
         st.markdown("""
-            **Instruções**:
-            1. Faça upload de um CSV contendo as colunas 'effect' (efeito estimado em cada estudo) e 'variance' (variância desses efeitos).
-            2. A Q-Estatística (Cochrane's Q) serve para verificar se há heterogeneidade significativa entre estudos em meta-análise.
+            **Notas**:
+            - Verifique se existem colunas 'effect' e 'variance' no dataset.
+            - Remova valores ausentes ou infinitos antes de prosseguir, se necessário.
         """)
         file = st.file_uploader("Upload CSV com efeitos e variâncias", type=["csv"], key="qstat")
         if file:
-            df = pd.read_csv(file)
+            df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
             st.dataframe(df.head())
             if st.button("Calcular Q"):
                 try:
-                    Q, p_val = cochrane_q(df["effect"], df["variance"])
+                    effects = df["effect"].dropna()
+                    variances = df["variance"].dropna()
+                    Q, p_val = cochrane_q(effects, variances)
                     st.write(f"**Q de Cochrane**: {Q:.4f}")
                     st.write(f"**p-valor de heterogeneidade**: {p_val:.4f}")
                     if p_val < 0.05:
@@ -614,11 +637,13 @@ def main():
                     else:
                         st.info("Não há evidências de heterogeneidade significativa.")
                     st.markdown(
-                        "**Interpretação**: p-valor < 0.05 indica que os estudos não são homogêneos, ou seja, "
-                        "há diferença entre eles que pode impactar a meta-análise."
+                        "**Interpretação**: p-valor < 0.05 indica que os estudos não são homogêneos, "
+                        "ou seja, há variação significativa entre eles (heterogeneidade)."
                     )
+                except KeyError:
+                    st.error("Certifique-se de que as colunas se chamam exatamente 'effect' e 'variance'.")
                 except Exception as e:
-                    st.error(f"Erro: {e}. Verifique se as colunas 'effect' e 'variance' existem no CSV.")
+                    st.error(f"Erro: {e}. Verifique se os dados contêm valores inválidos ou ausentes.")
 
     # =========================================================
     # SEÇÃO 14: Q-Exponencial
@@ -627,29 +652,31 @@ def main():
         st.subheader("Ajuste Q-Exponencial (Estatística de Tsallis)")
         st.markdown("""
             **Instruções**:
-            1. Faça upload de um CSV contendo ao menos uma coluna numérica (ex.: valores contínuos).
+            1. Faça upload de um CSV com ao menos uma coluna numérica, sem valores inválidos (NaN/Inf).
             2. Selecione a coluna que deseja ajustar a uma distribuição q-exponencial.
-            3. O método tentará ajustar os parâmetros da distribuição com base nos dados.
         """)
         file = st.file_uploader("Upload CSV com dados para ajuste", type=["csv"], key="qexp")
         if file:
-            df = pd.read_csv(file)
+            df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
             st.dataframe(df.head())
             colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
             col_num = st.selectbox("Selecione a coluna numérica", colunas_num, key="qexp_col")
 
             if st.button("Ajustar Q-Exponencial"):
-                data = df[col_num].dropna().values
-                try:
-                    lam_fit, q_fit = fit_q_exponential(data)
-                    st.write(f"**Parâmetros ajustados**: λ = {lam_fit:.4f}, q = {q_fit:.4f}")
-                    st.markdown(
-                        "**Interpretação**: A distribuição q-exponencial é uma generalização da exponencial. "
-                        "Valores de q próximos de 1 indicam comportamento semelhante à exponencial simples; "
-                        "valores de q diferentes de 1 sugerem sistemas não-extensivos (Tsallis)."
-                    )
-                except Exception as e:
-                    st.error(f"Falha ao ajustar Q-Exponencial: {e}")
+                data_clean = df[col_num].dropna().values
+                if len(data_clean) == 0:
+                    st.error("A coluna selecionada não possui dados numéricos válidos (após remover NaN/Inf).")
+                else:
+                    try:
+                        lam_fit, q_fit = fit_q_exponential(data_clean)
+                        st.write(f"**Parâmetros ajustados**: λ = {lam_fit:.4f}, q = {q_fit:.4f}")
+                        st.markdown(
+                            "**Interpretação**: A q-exponencial (Tsallis) é uma generalização da exponencial. "
+                            "Se q ≈ 1, o modelo é quase exponencial. Se q se afasta de 1, o sistema apresenta "
+                            "características não-extensivas."
+                        )
+                    except Exception as e:
+                        st.error(f"Falha ao ajustar Q-Exponencial: {e}")
 
 if __name__ == "__main__":
     main()
