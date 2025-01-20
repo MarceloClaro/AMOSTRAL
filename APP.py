@@ -209,7 +209,7 @@ def main():
         "Testes de Normalidade",
         "Testes Não-Paramétricos",
         "Two-Way ANOVA",
-        "",
+        "Regressões",
         "Teste de Hipótese",
         "Testes de Correlação",
         "Q-Estatística",
