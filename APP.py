@@ -377,6 +377,7 @@ def main():
 
 
     # SEÇÃO 10: Regressões com geração automática de fórmula
+    # SEÇÃO 8: Regressões com geração automática de fórmula
     elif menu == "Regressões":
         st.subheader("Regressões")
         file = st.file_uploader("Upload de CSV para regressão", type=["csv"], key="reg")
@@ -412,10 +413,23 @@ def main():
                     if tipo == "Linear":
                         resultado = regressao_linear(df, auto_formula)
                         st.text_area("Saída da Regressão Linear", resultado, height=300)
+                        st.markdown(
+                            "**Interpretação**: Analise os coeficientes, p-valores e estatísticas de ajuste. "
+                            "Coeficientes significativos (p < 0.05) indicam relação estatística entre as variáveis."
+                        )
                     else:
-                        resultado = regressao_logistica(df, auto_formula)
-                        st.text_area("Saída da Regressão Logística", resultado, height=300)
-                    st.markdown("**Interpretação**: Verifique os coeficientes e p-valores nos resultados da regressão.")
+                        # Verificação para regressão logística
+                        unique_vals = df[dep_var].dropna().unique()
+                        if not set(unique_vals).issubset({0,1}):
+                            st.error("Para regressão logística, a variável dependente deve ser binária (0 ou 1).")
+                        else:
+                            resultado = regressao_logistica(df, auto_formula)
+                            st.text_area("Saída da Regressão Logística", resultado, height=300)
+                            st.markdown(
+                                "**Interpretação**: Analise os coeficientes, p-valores e odds-ratios. "
+                                "Coeficientes significativos (p < 0.05) indicam que as variáveis independentes "
+                                "têm efeito estatístico na probabilidade do evento."
+                            )
 
     # SEÇÃO 11: Teste de Hipótese
     elif menu == "Teste de Hipótese":
