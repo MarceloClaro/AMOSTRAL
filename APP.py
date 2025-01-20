@@ -483,7 +483,7 @@ def main():
                         st.error("A análise Two-Way ANOVA não pôde ser realizada. Verifique seus dados e seleções.")
 
     # SEÇÃO 10: Regressões com geração automática de fórmula
-    
+    # SEÇÃO 10: Regressões com geração automática de fórmula
     elif menu == "Regressões":
         st.subheader("Regressões")
         st.markdown(r"""
@@ -537,10 +537,9 @@ def main():
                     st.error("Variável dependente ou independentes não definidos. Certifique-se de selecionar as variáveis necessárias.")
                 else:
                     if tipo == "Linear":
-                        # ... [código para regressão linear permanece inalterado] ...
+                        # [Código para regressão linear permanece igual...]
                         pass  
                     else:
-                        # Verificação para regressão logística e conversão
                         unique_vals = df[dep_var].dropna().unique()
                         if not set(unique_vals).issubset({0,1}):
                             st.warning("Para regressão logística, a variável dependente deve ser binária (0 ou 1).")
@@ -548,13 +547,11 @@ def main():
                                 **Escolha um método de binarização para a variável dependente:**
                                 Se a variável dependente não for binária, podemos convertê-la automaticamente.
                             """)
-                            # Seleção do método de conversão
                             conversion_method = st.selectbox(
                                 "Escolha o método de binarização",
                                 ["Mediana", "Média", "Percentil 75", "Percentil 25"]
                             )
 
-                            # Aplicar conversão baseada no método selecionado
                             if conversion_method == "Mediana":
                                 threshold = df[dep_var].median()
                                 st.markdown(f"**Usando a Mediana como limiar:** {threshold:.3f}")
@@ -575,7 +572,16 @@ def main():
                             df[dep_var] = (df[dep_var] > threshold).astype(int)
                             unique_vals = df[dep_var].unique()
                             st.markdown(f"Após conversão, os valores únicos da variável dependente são: {unique_vals}")
-                        
+                            
+                            # Exibir distribuição da variável convertida
+                            st.markdown(f"**Distribuição de {dep_var} após conversão usando {conversion_method}:**")
+                            fig, ax = plt.subplots()
+                            sns.countplot(x=df[dep_var], ax=ax, palette="pastel")
+                            ax.set_title(f"Contagem de valores binários em {dep_var}")
+                            ax.set_xlabel(f"Valores de {dep_var} (0 ou 1)")
+                            ax.set_ylabel("Frequência")
+                            st.pyplot(fig)
+
                         try:
                             resultado = regressao_logistica(df, auto_formula)
                             st.text_area("Saída da Regressão Logística", resultado, height=300)
