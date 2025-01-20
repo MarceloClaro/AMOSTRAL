@@ -39,9 +39,7 @@ def exibir_grafico_pca(pca_df):
     plt.grid(True)
     st.pyplot(plt)
 
-# ===================================================
-# 1) Dataset de Poços Artesianos (código e funções)
-# ===================================================
+# Função para salvar DataFrame como CSV
 @st.cache_data
 def convert_df_to_csv(dataframe: pd.DataFrame):
     """
@@ -50,6 +48,7 @@ def convert_df_to_csv(dataframe: pd.DataFrame):
     """
     return dataframe.to_csv(index=False).encode('utf-8')
 
+# Função para criar o dataset fictício de poços artesianos
 def create_well_dataset():
     """
     Retorna um DataFrame fictício com dados de poços artesianos.
@@ -76,9 +75,7 @@ def create_well_dataset():
     }
     return pd.DataFrame(data)
 
-# ===================================================
-# 11) INTERFACE STREAMLIT (main)
-# ===================================================
+# Função principal para executar o Streamlit
 def main():
     st.title("Ferramenta Avançada de Estatística e Cálculo Amostral")
 
@@ -100,11 +97,9 @@ def main():
         "Testes de Correlação",
         "Q-Estatística",
         "Q-Exponencial"
-    ])
+    ], key="menu_radio")
 
-    # =========================================================
     # SEÇÃO 1: Dataset de Poços Artesianos
-    # =========================================================
     if menu == "Dataset de Poços Artesianos":
         st.subheader("Dataset de Poços Artesianos")
         st.write("Este é um dataset fictício de poços artesianos com informações sobre vazão, salinidade, composição química, clima local e profundidade.")
@@ -133,16 +128,10 @@ def main():
         """)
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção"):
+        if st.button("Continuar para a próxima seção", key="continuar_1"):
             return
 
-    # O código continua de forma semelhante para cada seção
-    # Cada seção terá o código específico para executar a análise correspondente e apresentar os resultados
-    # Seguindo a estrutura de perguntar ao usuário se ele deseja continuar
-    # Como a estrutura das seções é semelhante, a parte seguinte do código segue o mesmo padrão.
-# =========================================================
-# SEÇÃO 2: Cálculo de Amostragem - Proporção
-# =========================================================
+    # SEÇÃO 2: Cálculo de Amostragem - Proporção
     if menu == "Cálculo de Amostragem - Proporção":
         st.subheader("Cálculo de Tamanho Amostral para Proporção")
         populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000, step=1)
@@ -150,7 +139,7 @@ def main():
         margem_erro = st.slider("Margem de Erro (%)", 1, 50, 5, 1)
         p_est = st.number_input("Proporção estimada (0.0 a 1.0)", 0.0, 1.0, 0.5, 0.01)
 
-        if st.button("Calcular"):
+        if st.button("Calcular", key="calcular_proporcao"):
             resultado = tamanho_amostral_proporcao(populacao, nivel_confianca, margem_erro, p_est)
             if resultado:
                 st.success(f"Tamanho amostral recomendado: {resultado}")
@@ -163,20 +152,18 @@ def main():
                 st.error("Erro no cálculo. Verifique os parâmetros informados.")
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção"):
+        if st.button("Continuar para a próxima seção", key="continuar_2"):
             return
 
-# =========================================================
 # SEÇÃO 3: Cálculo de Amostragem - Média
-# =========================================================
-    elif menu == "Cálculo de Amostragem - Média":
+    if menu == "Cálculo de Amostragem - Média":
         st.subheader("Cálculo de Tamanho Amostral para Média")
         populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000, step=1)
         nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1)
         margem_erro_abs = st.number_input("Margem de Erro (valor absoluto)", min_value=0.001, value=5.0, step=0.1)
         desvio_padrao = st.number_input("Desvio-Padrão (σ)", min_value=0.001, value=10.0, step=0.1)
 
-        if st.button("Calcular"):
+        if st.button("Calcular", key="calcular_media"):
             resultado = tamanho_amostral_media(populacao, nivel_confianca, margem_erro_abs, desvio_padrao)
             if resultado:
                 st.success(f"Tamanho amostral recomendado: {resultado}")
@@ -189,12 +176,10 @@ def main():
                 st.error("Erro no cálculo. Verifique os parâmetros informados.")
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção"):
+        if st.button("Continuar para a próxima seção", key="continuar_3"):
             return
 
-# =========================================================
 # SEÇÃO 4: Intervalo de Confiança - Proporção
-# =========================================================
     elif menu == "Intervalo de Confiança - Proporção":
         st.subheader("Cálculo de Intervalo de Confiança para Proporção")
         n = st.number_input("Tamanho da Amostra (n)", min_value=1, value=100, step=1)
@@ -210,12 +195,10 @@ def main():
             )
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção"):
+        if st.button("Continuar para a próxima seção", key="continuar_4"):
             return
 
-# =========================================================
 # SEÇÃO 5: Intervalo de Confiança - Média
-# =========================================================
     elif menu == "Intervalo de Confiança - Média":
         st.subheader("Cálculo de Intervalo de Confiança para Média")
         n = st.number_input("Tamanho da Amostra (n)", min_value=1, value=50, step=1)
@@ -233,12 +216,10 @@ def main():
             )
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção"):
+        if st.button("Continuar para a próxima seção", key="continuar_5"):
             return
 
-# =========================================================
 # SEÇÃO 6: Estatísticas Descritivas
-# =========================================================
     elif menu == "Estatísticas Descritivas":
         st.subheader("Estatísticas Descritivas")
         st.markdown("""
@@ -264,12 +245,10 @@ def main():
                 )
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção"):
+        if st.button("Continuar para a próxima seção", key="continuar_6"):
             return
 
-# =========================================================
 # SEÇÃO 7: Testes de Normalidade
-# =========================================================
     elif menu == "Testes de Normalidade":
         st.subheader("Testes de Normalidade")
         file = st.file_uploader("Upload CSV para testes de normalidade", type=["csv"], key="normal")
@@ -303,12 +282,10 @@ def main():
                 )
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção"):
+        if st.button("Continuar para a próxima seção", key="continuar_7"):
             return
 
-# =========================================================
 # SEÇÃO 8: Testes Não-Paramétricos
-# =========================================================
     elif menu == "Testes Não-Paramétricos":
         st.subheader("Testes Não-Paramétricos")
         file = st.file_uploader("Upload CSV para testes não-paramétricos", type=["csv"], key="np")
@@ -348,12 +325,10 @@ def main():
                 )
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção"):
+        if st.button("Continuar para a próxima seção", key="continuar_8"):
             return
 
-# =========================================================
 # SEÇÃO 9: Two-Way ANOVA
-# =========================================================
     elif menu == "Two-Way ANOVA":
         st.subheader("Two-Way ANOVA")
         file = st.file_uploader("Upload CSV para Two-Way ANOVA", type=["csv"], key="anova2")
@@ -375,12 +350,10 @@ def main():
                     )
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção"):
+        if st.button("Continuar para a próxima seção", key="continuar_9"):
             return
 
-# =========================================================
 # SEÇÃO 10: Regressões
-# =========================================================
     elif menu == "Regressões":
         st.subheader("Regressões")
         file = st.file_uploader("Upload CSV para regressões", type=["csv"], key="reg")
@@ -408,12 +381,10 @@ def main():
                     )
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção"):
+        if st.button("Continuar para a próxima seção", key="continuar_10"):
             return
 
-# =========================================================
 # SEÇÃO 11: Teste de Hipótese (One-Sample t-test)
-# =========================================================
     elif menu == "Teste de Hipótese":
         st.subheader("Teste de Hipótese (One-Sample t-test)")
         file = st.file_uploader("Upload CSV para teste de hipótese", type=["csv"], key="hipo")
@@ -442,12 +413,10 @@ def main():
                     )
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção"):
+        if st.button("Continuar para a próxima seção", key="continuar_11"):
             return
 
-# =========================================================
 # SEÇÃO 12: Testes de Correlação
-# =========================================================
     elif menu == "Testes de Correlação":
         st.subheader("Testes de Correlação (Pearson, Spearman, Kendall)")
         file = st.file_uploader("Upload CSV para correlação", type=["csv"], key="corr")
@@ -485,12 +454,10 @@ def main():
                     )
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção"):
+        if st.button("Continuar para a próxima seção", key="continuar_12"):
             return
 
-# =========================================================
 # SEÇÃO 13: Q-Estatística (Cochrane's Q)
-# =========================================================
     elif menu == "Q-Estatística":
         st.subheader("Cálculo de Q-Estatística (Cochrane’s Q para meta-análise)")
         file = st.file_uploader("Upload CSV com efeitos e variâncias", type=["csv"], key="qstat")
@@ -514,12 +481,10 @@ def main():
                     st.error(f"Erro: {e}. Verifique se as colunas 'effect' e 'variance' existem no CSV.")
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção"):
+        if st.button("Continuar para a próxima seção", key="continuar_13"):
             return
 
-# =========================================================
 # SEÇÃO 14: Q-Exponencial
-# =========================================================
     elif menu == "Q-Exponencial":
         st.subheader("Ajuste Q-Exponencial (Estatística de Tsallis)")
         file = st.file_uploader("Upload CSV com dados para ajuste", type=["csv"], key="qexp")
@@ -543,8 +508,14 @@ def main():
                     st.error(f"Falha ao ajustar Q-Exponencial: {e}")
 
         # Perguntar se o usuário quer continuar para a próxima seção
-        if st.button("Continuar para a próxima seção"):
+        if st.button("Finalizar Análise", key="finalizar_14"):
             return
+
+if __name__ == "__main__":
+    main()
+
+    main()
+
 
 if __name__ == "__main__":
     main()
