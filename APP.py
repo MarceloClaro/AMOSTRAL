@@ -359,17 +359,21 @@ def main():
         st.subheader("Two-Way ANOVA")
         st.markdown("""
             **Orientações para Two-Way ANOVA**:
-            - Faça upload de um arquivo CSV contendo dados.
+            - Faça upload de um arquivo CSV contendo seus dados.
             - Selecione uma variável numérica dependente e duas variáveis categóricas como fatores.
-            - A Two-Way ANOVA avalia se há diferenças significativas na média da variável dependente entre grupos formados pelos fatores,
-              considerando também a interação entre eles.
-            - A análise fornece uma tabela com estatísticas F e p-valores para cada fator e para a interação, permitindo identificar quais 
-              efeitos são estatisticamente significativos.
-            - Certifique-se de que seus dados estejam limpos (sem valores ausentes - NaN ou infinitos - Inf) para obter resultados precisos.
+            - A Two-Way ANOVA verifica se existem diferenças significativas nas médias da variável dependente entre 
+              os grupos formados pelos fatores, incluindo também a interação entre esses fatores.
+            - O teste fornece uma tabela com estatísticas F e p-valores para cada fator e para a interação, 
+              ajudando a identificar quais efeitos são estatisticamente significativos.
+            - O nível de significância padrão é 5%. Isso significa que há uma chance de 5% de concluir 
+              que um efeito existe quando, na verdade, ele não existe (erro tipo I). Porém, você pode 
+              ajustar esse nível conforme sua necessidade.
+            - Garanta que seus dados estejam limpos, sem valores ausentes (NaN) ou infinitos (Inf), para 
+              obter resultados precisos.
         """)
         st.markdown("#### Fórmula Geral para Two-Way ANOVA:")
         st.latex(r"Y_{ijk} = \mu + \alpha_i + \beta_j + (\alpha\beta)_{ij} + \epsilon_{ijk}")
-        st.markdown("""
+        st.markdown(r"""
             Onde:
             - \(Y_{ijk}\) é a observação da variável dependente para o nível \(i\) do Fator 1, nível \(j\) do Fator 2 e réplica \(k\).
             - \(\mu\) é a média geral.
@@ -379,6 +383,17 @@ def main():
             - \(\epsilon_{ijk}\) é o erro aleatório ou residual.
         """)
 
+        st.markdown("""
+            **Por que usamos um nível de significância de 5%?**  
+            O nível de significância é o limite que definimos para decidir se um resultado é estatisticamente significativo. 
+            Um nível de 5% (0,05) é tradicionalmente usado porque oferece um bom equilíbrio entre 
+            detectar efeitos reais e evitar falsos positivos. Em termos simples, ao usar 5%, 
+            aceitamos uma chance de 5% de identificar um efeito que não existe de fato.  
+            Usuários podem ajustar esse valor se quiserem ser mais rigorosos (por exemplo, 1%) 
+            ou mais flexíveis (por exemplo, 10%).
+        """)
+
+        # Upload de arquivo
         file = st.file_uploader("Upload de CSV para Two-Way ANOVA", type=["csv"], key="anova2")
         if file:
             df = pd.read_csv(file).replace([np.inf, -np.inf], np.nan)
@@ -398,46 +413,50 @@ def main():
                 cat1 = st.selectbox("Selecione o Fator 1", colunas_cat)
                 cat2 = st.selectbox("Selecione o Fator 2", colunas_cat)
 
+                # Permitir ajuste do nível de significância
+                significance_level = st.slider("Nível de significância (%) para interpretação", 1, 10, 5) / 100.0
+                st.markdown(f"**Nível de significância selecionado: {significance_level*100:.0f}%**")
+
                 if st.button("Executar Two-Way ANOVA"):
                     res = anova_two_way(df, col_num, cat1, cat2)
                     if res is not None:
                         st.dataframe(res)
                         st.markdown("### Interpretação Detalhada da Tabela ANOVA:")
-                        st.markdown("""
-                        A tabela ANOVA acima apresenta os resultados do teste Two-Way ANOVA. 
-                        Cada linha corresponde a uma fonte de variação no modelo:
+                        st.markdown(f"""
+                        A tabela ANOVA apresenta os resultados do teste. Cada linha representa uma fonte de variação:
                         - **C({cat1})**: efeito do primeiro fator.
                         - **C({cat2})**: efeito do segundo fator.
-                        - **C({cat1}):C({cat2})**: efeito de interação entre os dois fatores.
-                        - **Residual**: variabilidade não explicada pelos fatores.
+                        - **C({cat1}):C({cat2})**: interação entre os dois fatores.
+                        - **Residual**: variabilidade não explicada pelo modelo.
                         
-                        Para cada fonte, a tabela mostra:
-                        - **Estatística F**: razão entre a variação explicada pelo efeito e a variação residual. 
-                          Valores maiores de F indicam que o efeito provavelmente não é devido ao acaso.
-                        - **p-valor** (PR(>F)): probabilidade de obter um valor de F tão extremo quanto o observado 
-                          se a hipótese nula (de que não há efeito) for verdadeira.
+                        **Estatística F**: Compara a variabilidade entre grupos com a variabilidade dentro dos grupos. 
+                        Valores maiores sugerem efeitos mais fortes.
+                        
+                        **p-valor**: Probabilidade de obter um valor de F tão extremo se não houver efeito real. 
+                        Se o p-valor for menor que {significance_level*100:.0f}%, consideramos o efeito significativo.
                         """)
                         for index, row in res.iterrows():
                             st.markdown(f"**{index}**:")
                             st.markdown(f"- Estatística F: {row['F']:.3f}")
                             st.markdown(f"- p-valor: {row['PR(>F)']:.3f}")
-                            if row['PR(>F)'] < 0.05:
+                            if row['PR(>F)'] < significance_level:
                                 st.markdown(f"- **Significativo**: O efeito de {index} em {col_num} é estatisticamente significativo.")
                                 if index == f"C({cat1}):C({cat2})":
-                                    st.markdown("- Isso sugere que a interação entre os fatores altera significativamente a média de {}.".format(col_num))
+                                    st.markdown(f"- Sugere que a interação entre {cat1} e {cat2} altera significativamente a média de {col_num}.")
                                 else:
-                                    st.markdown(f"- Isso significa que diferentes níveis de {index.split(']')[0].split('[')[-1]} alteram significativamente {col_num}.")
+                                    factor = index.split(']')[0].split('[')[-1]
+                                    st.markdown(f"- Variações no nível de {factor} afetam significativamente {col_num}.")
                             else:
-                                st.markdown(f"- **Não significativo**: Não há efeito estatístico significativo de {index} em {col_num} ao nível de 5%.")
-                        
-                        st.markdown("""
-                        ### Considerações Adicionais:
-                        - Um p-valor menor que 0.05 para um fator sugere que pelo menos um dos grupos daquele fator tem uma média significativamente diferente dos demais.
-                        - Um p-valor significativo para a interação indica que o efeito de um fator depende do nível do outro.
-                        - Altos valores de F com p-valores baixos sugerem que os fatores ou a interação explicam uma parte importante da variabilidade em {}.
-                        - As suposições de homogeneidade das variâncias e normalidade dos resíduos devem ser verificadas para validar os resultados da ANOVA.
-                        """.format(col_num))
+                                st.markdown(f"- **Não significativo**: Não há efeito estatístico significativo de {index} em {col_num} ao nível de {significance_level*100:.0f}%.")
 
+                        st.markdown(f"""
+                        ### Considerações Adicionais:
+                        - Um p-valor menor que {significance_level*100:.0f}% para um fator sugere que existe diferença nas médias 
+                          entre pelo menos alguns dos seus níveis.
+                        - Um p-valor significativo para a interação indica que o efeito de um fator depende do nível do outro.
+                        - Altos valores de F com p-valores baixos mostram que os fatores ou a interação explicam bem a variabilidade em {col_num}.
+                        - As suposições de homogeneidade de variâncias e normalidade dos resíduos são importantes para a validade dos resultados.
+                        """)
                         fig, ax = plt.subplots(figsize=(8,6))
                         sns.boxplot(data=df, x=cat1, y=col_num, hue=cat2, ax=ax)
                         ax.set_title(f"Distribuição de {col_num} por {cat1} e {cat2}")
@@ -446,13 +465,11 @@ def main():
                         st.pyplot(fig)
                         st.markdown(
                             "**Interpretação do Boxplot**: "
-                            "O boxplot mostra a distribuição de " 
-                            f"{col_num} para cada combinação de níveis de {cat1} e {cat2}. "
-                            "Diferenças nas medianas ou na variabilidade entre os grupos podem refletir os efeitos observados na ANOVA."
+                            f"O boxplot mostra como {col_num} varia para cada combinação de {cat1} e {cat2}. "
+                            "Observações de diferenças nas medianas e dispersões ajudam a visualizar efeitos significativos."
                         )
                     else:
-                        st.error("A análise Two-Way ANOVA não pôde ser realizada. Verifique os dados e as seleções.")
-
+                        st.error("A análise Two-Way ANOVA não pôde ser realizada. Verifique seus dados e seleções.")
 
     # SEÇÃO 10: Regressões com geração automática de fórmula
 
