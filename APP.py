@@ -82,6 +82,7 @@ def main():
     # Criação do dataset de poços artesianos para exibição e download
     df_wells = create_well_dataset()
 
+    # Usando uma chave única para o menu
     menu = st.sidebar.radio("Menu", [
         "Dataset de Poços Artesianos",
         "Cálculo de Amostragem - Proporção",
@@ -97,7 +98,7 @@ def main():
         "Testes de Correlação",
         "Q-Estatística",
         "Q-Exponencial"
-    ], key="menu_radio")
+    ], key="menu_radio_1")  # Chave exclusiva para o radio
 
     # SEÇÃO 1: Dataset de Poços Artesianos
     if menu == "Dataset de Poços Artesianos":
@@ -119,7 +120,7 @@ def main():
             data=csv_bytes,
             file_name="pocos_artesianos.csv",
             mime="text/csv",
-            key="download_button"
+            key="download_button_1"  # Chave única para o botão de download
         )
 
         st.markdown("""
@@ -135,12 +136,12 @@ def main():
     # SEÇÃO 2: Cálculo de Amostragem - Proporção
     if menu == "Cálculo de Amostragem - Proporção":
         st.subheader("Cálculo de Tamanho Amostral para Proporção")
-        populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000, step=1, key="populacao_input")
-        nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1, key="nivel_confianca_slider")
-        margem_erro = st.slider("Margem de Erro (%)", 1, 50, 5, 1, key="margem_erro_slider")
-        p_est = st.number_input("Proporção estimada (0.0 a 1.0)", 0.0, 1.0, 0.5, 0.01, key="proporcao_input")
+        populacao = st.number_input("Tamanho da População (N)", min_value=1, value=1000, step=1, key="populacao_input_1")
+        nivel_confianca = st.slider("Nível de Confiança (%)", 0, 100, 95, 1, key="nivel_confianca_slider_1")
+        margem_erro = st.slider("Margem de Erro (%)", 1, 50, 5, 1, key="margem_erro_slider_1")
+        p_est = st.number_input("Proporção estimada (0.0 a 1.0)", 0.0, 1.0, 0.5, 0.01, key="proporcao_input_1")
 
-        if st.button("Calcular", key="calcular_button_1"):
+        if st.button("Calcular", key="calcular_button_2"):
             resultado = tamanho_amostral_proporcao(populacao, nivel_confianca, margem_erro, p_est)
             if resultado:
                 st.success(f"Tamanho amostral recomendado: {resultado}")
