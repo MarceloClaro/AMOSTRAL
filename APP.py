@@ -6,7 +6,13 @@ import seaborn as sns
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
-import dcor  # Certifique-se de ter instalado: pip install dcor
+
+# Tenta importar o módulo dcor; se não conseguir, desativa a funcionalidade
+try:
+    import dcor
+    dcor_installed = True
+except ImportError:
+    dcor_installed = False
 
 # ===================================================
 # FUNÇÕES DE CORRELAÇÃO (TRADICIONAIS E INOVADORAS)
@@ -31,6 +37,9 @@ def correlacao_distancia(x, y):
     Avalia a relação geral (linear ou não) entre as variáveis.
     Retorna um valor entre 0 (sem relação) e 1 (relação perfeita).
     """
+    if not dcor_installed:
+        st.error("O módulo 'dcor' não está instalado. Instale-o via 'pip install dcor' para utilizar a correlação de distância.")
+        return None
     corr = dcor.distance_correlation(x, y)
     return corr
 
@@ -93,7 +102,7 @@ def correlacoes_section():
     if file:
         df = pd.read_csv(file)
         
-        # Aplicação do tratamento de dados conforme a escolha do usuário
+        # Aplica o tratamento escolhido
         if tratamento == "Remover valores ausentes":
             df = df.dropna()
         else:
@@ -103,13 +112,13 @@ def correlacoes_section():
         st.markdown("**Pré-visualização dos dados tratados:**")
         st.dataframe(df.head())
 
-        # Verifica se há pelo menos duas colunas numéricas
+        # Verifica se há ao menos duas colunas numéricas
         colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
         if len(colunas_num) < 2:
             st.error("São necessárias ao menos duas variáveis numéricas para a análise.")
             return
         
-        # Seleção das variáveis para a análise
+        # Seleção das variáveis para análise
         x_var = st.selectbox("Escolha a variável X", colunas_num, key="x_corr")
         y_var = st.selectbox("Escolha a variável Y", colunas_num, key="y_corr")
         
@@ -141,8 +150,9 @@ def correlacoes_section():
             x_data = x_data[:min_len]
             y_data = y_data[:min_len]
             corr = correlacao_distancia(x_data, y_data)
-            st.write(f"**Distância:** correlação = {corr:.4f}")
-            st.info("Interpretação: Valores próximos de 0 indicam pouca ou nenhuma relação; valores próximos de 1 indicam alta dependência, mesmo que a relação não seja linear.")
+            if corr is not None:
+                st.write(f"**Distância:** correlação = {corr:.4f}")
+                st.info("Interpretação: Valores próximos de 0 indicam pouca ou nenhuma relação; valores próximos de 1 indicam alta dependência, mesmo que a relação não seja linear.")
         
         # 5. Correlação Parcial (opcional)
         st.markdown("#### Correlação Parcial (Controlando uma terceira variável)")
@@ -154,9 +164,9 @@ def correlacoes_section():
             control_data = df.loc[common_index, control_var]
             r, pval = correlacao_parcial(x_data, y_data, control_data)
             st.write(f"**Parcial:** r = {r:.4f}, p-valor = {pval:.4f}")
-            st.info("Interpretação: Se a correlação entre X e Y se mantém alta após descontar o efeito da variável de controle, isso indica uma forte relação intrínseca entre elas.")
+            st.info("Interpretação: Se a correlação entre X e Y se mantiver alta após descontar o efeito da variável de controle, isso indica uma forte relação intrínseca entre elas.")
         
-        # Exibe um gráfico de dispersão para complementar a análise
+        # Exibe um gráfico de dispersão para visualização complementar
         if st.checkbox("Exibir gráfico de dispersão com tendência"):
             fig, ax = plt.subplots(figsize=(6,4))
             sns.scatterplot(data=df, x=x_var, y=y_var, ax=ax)
