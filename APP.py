@@ -9,7 +9,7 @@ import statsmodels.api as sm
 from statsmodels.formula.api import ols
 from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
 
-# Tenta importar dcor; se não for possível, desativa essa funcionalidade
+# Tenta importar o dcor; se não for possível, desativa essa funcionalidade
 try:
     import dcor
     dcor_installed = True
@@ -30,10 +30,10 @@ def create_well_dataset():
         "Magnesium_mg_per_L": [75, 65, 80, 70, 78, 82, 76, 69, 80, 77],
         "Sulfate_mg_per_L": [80, 100, 70, 90, 85, 95, 75, 88, 82, 89],
         "Chloride_mg_per_L": [120, 140, 110, 130, 125, 135, 115, 128, 122, 119],
-        "Geological_Formation": ["Granite", "Shale", "Limestone", "Sandstone", "Granite",
-                                 "Shale", "Limestone", "Sandstone", "Granite", "Shale"],
-        "Climate_Type": ["Temperate", "Arid", "Subtropical", "Continental", "Temperate",
-                         "Arid", "Subtropical", "Continental", "Temperate", "Arid"],
+        "Geological_Formation": ["Granito", "Argilito", "Calcário", "Arenito", "Granito",
+                                 "Argilito", "Calcário", "Arenito", "Granito", "Argilito"],
+        "Climate_Type": ["Temperado", "Árido", "Subtropical", "Continentais", "Temperado",
+                         "Árido", "Subtropical", "Continentais", "Temperado", "Árido"],
         "Depth_m": [250, 300, 210, 275, 240, 320, 230, 290, 260, 310]
     }
     return pd.DataFrame(data)
@@ -182,7 +182,6 @@ def clustering_section():
             st.error("Selecione pelo menos uma variável.")
             return
         
-        # Se o usuário escolher duas ou mais variáveis, monta o dataset de clustering
         data = df[variaveis].values
         
         algoritmo = st.selectbox("Escolha o algoritmo de clustering", options=["KMeans", "Hierarchical", "DBSCAN"])
@@ -202,8 +201,12 @@ def clustering_section():
             labels = model.fit_predict(data)
         
         df["Cluster"] = labels
+        st.markdown("**Resumo dos Clusters (médias das variáveis selecionadas):**")
+        resumo = df.groupby("Cluster")[variaveis].mean().reset_index()
+        st.dataframe(resumo)
+        
         st.markdown("**Visualização dos Clusters**")
-        # Se mais de duas variáveis foram escolhidas, utiliza PCA para reduzir a dimensão para 2D (opcional)
+        # Se mais de duas variáveis foram selecionadas, utiliza PCA para reduzir a dimensão para 2D
         if len(variaveis) > 2:
             from sklearn.decomposition import PCA
             pca = PCA(n_components=2)
@@ -215,7 +218,6 @@ def clustering_section():
             ax.set_title(f"Clustering com {algoritmo} (reduzido por PCA)")
             st.pyplot(fig)
         else:
-            # Se apenas duas variáveis foram selecionadas, plota diretamente
             fig, ax = plt.subplots(figsize=(6,4))
             sns.scatterplot(x=variaveis[0], y=variaveis[1], hue="Cluster", data=df, palette="viridis", ax=ax)
             ax.set_title(f"Clustering com {algoritmo}")
