@@ -149,6 +149,32 @@ def regressao_linear(df, formula: str):
     return model.summary().as_text()
 
 # ============================
+# FUNÇÕES DE TESTES T
+# ============================
+def teste_t_independente(df, grupo, valor):
+    """
+    Realiza o teste t de Student para duas amostras independentes.
+    A hipótese nula é que as médias dos dois grupos são iguais.
+    """
+    grupos = df[grupo].unique()
+    if len(grupos) != 2:
+        return None, None
+    grupo1 = df[df[grupo] == grupos[0]][valor].dropna()
+    grupo2 = df[df[grupo] == grupos[1]][valor].dropna()
+    return stats.ttest_ind(grupo1, grupo2)
+
+def teste_t_pareado(df, coluna1, coluna2):
+    """
+    Realiza o teste t pareado, comparando as médias de duas condições emparelhadas.
+    """
+    paired1 = df[coluna1].dropna()
+    paired2 = df[coluna2].dropna()
+    min_len = min(len(paired1), len(paired2))
+    paired1 = paired1.iloc[:min_len]
+    paired2 = paired2.iloc[:min_len]
+    return stats.ttest_rel(paired1, paired2)
+
+# ============================
 # FUNÇÕES DE Q-ESTATÍSTICA E Q-EXPONENCIAL
 # ============================
 def cochrane_q(effects, variances):
@@ -242,7 +268,7 @@ def clustering_section():
             labels = model.fit_predict(data)
         
         df["Cluster"] = labels
-        st.markdown("**Resumo dos Clusters**")
+        st.markdown("**Resumo dos Clusters (médias das variáveis selecionadas):**")
         resumo = df.groupby("Cluster")[variaveis].mean().reset_index()
         st.dataframe(resumo)
         
@@ -335,120 +361,43 @@ def sample_size_calculator_section():
             st.error("Erro no cálculo do tamanho amostral para média.")
 
 # ============================
-# SEÇÃO DE ANOVA AMPLIADA
+# SEÇÃO DE TESTES T
 # ============================
-def anova_section():
-    st.subheader("ANOVA")
-    st.markdown("""
-    **ANOVA Unidirecional:**  
-    Testa se existem diferenças significativas entre as médias de três ou mais grupos independentes, com uma única variável independente.
-
-    **ANOVA Bidirecional:**  
-    Testa o efeito simultâneo de duas variáveis independentes (fatores) e sua interação na variável dependente.
-
-    **MANOVA:**  
-    Analisa o efeito de uma ou mais variáveis independentes sobre múltiplas variáveis dependentes.
-    
-    **Diferença entre teste ANOVA e teste t de Student:**  
-    O teste t de Student compara as médias de dois grupos, enquanto a ANOVA permite comparar três ou mais grupos.
-    """)
-    tipo_anova = st.radio("Selecione o tipo de ANOVA", options=["Unidirecional", "Bidirecional", "MANOVA"], key="tipo_anova")
-    file = st.file_uploader("Envie um CSV para ANOVA", type=["csv"], key="anova")
+def teste_t_section():
+    st.subheader("Testes t")
+    tipo_t = st.radio("Selecione o tipo de teste t", 
+                      options=["One-Sample", "Duas Amostras Independentes", "Pareado"], key="tipo_t")
+    file = st.file_uploader("Envie um CSV para teste t", type=["csv"], key="teste_t")
     if file:
         df = pd.read_csv(file).dropna()
-        if tipo_anova == "Unidirecional":
-            dep_var = st.selectbox("Variável dependente (numérica)", df.select_dtypes(include=[np.number]).columns, key="uni_dep")
-            fator = st.selectbox("Fator (variável categórica)", df.select_dtypes(include=["object"]).columns, key="uni_fator")
-            tabela = anova_unidirecional(df, dep_var, fator)
-            st.dataframe(tabela)
-        elif tipo_anova == "Bidirecional":
-            dep_var = st.selectbox("Variável dependente (numérica)", df.select_dtypes(include=[np.number]).columns, key="bi_dep")
-            fator1 = st.selectbox("Fator 1 (categórico)", df.select_dtypes(include=["object"]).columns, key="bi_fator1")
-            fator2 = st.selectbox("Fator 2 (categórico)", df.select_dtypes(include=["object"]).columns, key="bi_fator2")
-            tabela = anova_bidirecional(df, dep_var, fator1, fator2)
-            st.dataframe(tabela)
-        elif tipo_anova == "MANOVA":
-            dep_vars = st.multiselect("Variáveis dependentes (numéricas)", df.select_dtypes(include=[np.number]).columns, key="manova_dep")
-            fatores = st.multiselect("Fatores (categóricos)", df.select_dtypes(include=["object"]).columns, key="manova_fator")
-            if len(dep_vars) < 1 or len(fatores) < 1:
-                st.error("Selecione pelo menos uma variável dependente e um fator.")
+        if tipo_t == "One-Sample":
+            col = st.selectbox("Selecione a coluna numérica", df.select_dtypes(include=[np.number]).columns)
+            media_hipot = st.number_input("Média hipotética", value=0.0)
+            stat, p = stats.ttest_1samp(df[col], popmean=media_hipot)
+            st.write(f"t = {stat:.4f}, p-valor = {p:.4f}")
+        elif tipo_t == "Duas Amostras Independentes":
+            grupo = st.selectbox("Selecione a coluna que define os grupos", df.select_dtypes(include=["object"]).columns)
+            valor = st.selectbox("Selecione a coluna numérica para comparar", df.select_dtypes(include=[np.number]).columns)
+            grupos = df[grupo].unique()
+            if len(grupos) != 2:
+                st.error("A coluna de grupos deve ter exatamente 2 grupos para este teste.")
             else:
-                result = manova_analysis(df, dep_vars, fatores)
-                st.write(result)
+                stat, p = stats.ttest_ind(df[df[grupo]==grupos[0]][valor].dropna(), df[df[grupo]==grupos[1]][valor].dropna())
+                st.write(f"t = {stat:.4f}, p-valor = {p:.4f}")
+        elif tipo_t == "Pareado":
+            col1 = st.selectbox("Selecione a primeira coluna numérica", df.select_dtypes(include=[np.number]).columns, key="t_pareado1")
+            col2 = st.selectbox("Selecione a segunda coluna numérica", df.select_dtypes(include=[np.number]).columns, key="t_pareado2")
+            paired1 = df[col1].dropna()
+            paired2 = df[col2].dropna()
+            min_len = min(len(paired1), len(paired2))
+            paired1 = paired1.iloc[:min_len]
+            paired2 = paired2.iloc[:min_len]
+            stat, p = stats.ttest_rel(paired1, paired2)
+            st.write(f"t = {stat:.4f}, p-valor = {p:.4f}")
 
 # ============================
-# OUTRAS SEÇÕES (Exemplos)
+# SEÇÃO DE Q-ESTATÍSTICA E Q-EXPONENCIAL
 # ============================
-def estatistica_descritiva_section():
-    st.subheader("Estatísticas Descritivas")
-    file = st.file_uploader("Envie um CSV para análise descritiva", type=["csv"], key="desc")
-    if file:
-        df = pd.read_csv(file).dropna()
-        st.dataframe(df.head())
-        st.markdown("**Estatísticas Descritivas:**")
-        st.write(estatisticas_descritivas(df))
-
-def intervalo_confianca_section(tipo="proporcao"):
-    st.subheader(f"Intervalo de Confiança - {'Proporção' if tipo=='proporcao' else 'Média'}")
-    if tipo == "proporcao":
-        n = st.number_input("Tamanho da amostra (n)", min_value=1, value=100)
-        confianca = st.slider("Nível de confiança (%)", 80, 99, 95)
-        p_obs = st.number_input("Proporção observada", 0.0, 1.0, 0.5)
-        ic = intervalo_confianca_proporcao(n, confianca, p_obs)
-        st.write(f"Intervalo de Confiança: {ic[0]*100:.2f}% a {ic[1]*100:.2f}%")
-    else:
-        n = st.number_input("Tamanho da amostra (n)", min_value=1, value=50)
-        confianca = st.slider("Nível de confiança (%)", 80, 99, 95)
-        media = st.number_input("Média observada", value=50.0)
-        desvio = st.number_input("Desvio-padrão", value=10.0)
-        ic = intervalo_confianca_media(n, confianca, media, desvio)
-        st.write(f"Intervalo de Confiança: {ic[0]:.2f} a {ic[1]:.2f}")
-
-def normalidade_section():
-    st.subheader("Teste de Normalidade (Shapiro-Wilk)")
-    file = st.file_uploader("Envie um CSV", type=["csv"], key="normal")
-    if file:
-        df = pd.read_csv(file).dropna()
-        col = st.selectbox("Selecione a coluna numérica", df.select_dtypes(include=[np.number]).columns)
-        stat, p = teste_shapiro(df[col])
-        st.write(f"Estatística: {stat:.4f}, p-valor: {p:.4f}")
-
-def nao_parametricos_section():
-    st.subheader("Testes Não-Paramétricos")
-    file = st.file_uploader("Envie um CSV", type=["csv"], key="nao_param")
-    if file:
-        df = pd.read_csv(file).dropna()
-        num_col = st.selectbox("Variável Numérica", df.select_dtypes(include=[np.number]).columns)
-        cat_col = st.selectbox("Variável Categórica", df.select_dtypes(include=["object"]).columns)
-        stat, p = teste_mannwhitney(df, num_col, cat_col)
-        if stat is None:
-            st.error("A variável categórica deve ter exatamente 2 grupos.")
-        else:
-            st.write(f"Mann-Whitney: Estatística = {stat:.4f}, p-valor = {p:.4f}")
-
-def regressao_section():
-    st.subheader("Regressão Linear")
-    file = st.file_uploader("Envie um CSV", type=["csv"], key="regressao")
-    if file:
-        df = pd.read_csv(file).dropna()
-        dep_var = st.selectbox("Variável dependente", df.select_dtypes(include=[np.number]).columns)
-        indep_vars = st.multiselect("Variáveis independentes", df.columns.tolist())
-        if dep_var and indep_vars:
-            terms = [f"C({var})" if df[var].dtype == object else var for var in indep_vars]
-            formula = f"{dep_var} ~ " + " + ".join(terms)
-            resultado = regressao_linear(df, formula)
-            st.text_area("Resumo da Regressão", resultado, height=300)
-
-def hipotese_section():
-    st.subheader("Teste de Hipótese (One-Sample t-test)")
-    file = st.file_uploader("Envie um CSV", type=["csv"], key="hipotese")
-    if file:
-        df = pd.read_csv(file).dropna()
-        col = st.selectbox("Selecione a coluna numérica", df.select_dtypes(include=[np.number]).columns)
-        media_hipot = st.number_input("Média hipotética", value=0.0)
-        stat, p = stats.ttest_1samp(df[col], popmean=media_hipot)
-        st.write(f"t = {stat:.4f}, p-valor = {p:.4f}")
-
 def q_estat_section():
     st.subheader("Q-Estatística (Cochrane’s Q)")
     file = st.file_uploader("Envie um CSV com colunas 'effect' e 'variance'", type=["csv"], key="q_estat")
@@ -491,7 +440,7 @@ def q_exponencial_section():
 def main():
     st.title("PhD Tool para Análise e Tratamento de Dados")
     st.markdown("Uma ferramenta robusta e flexível para análises estatísticas, modelagem e tratamento de dados. "
-                "Inclui gerador de CSV sintético para teste, calculadora de tamanho de amostra, técnicas de clustering, ANOVA, e muito mais.")
+                "Inclui gerador de CSV sintético para teste, calculadora de tamanho de amostra, técnicas de clustering, ANOVA, testes t e muito mais.")
     
     menu = st.sidebar.selectbox("Selecione a Seção", 
         options=[
@@ -506,6 +455,7 @@ def main():
             "ANOVA", 
             "Regressão Linear", 
             "Teste de Hipótese", 
+            "Teste t", 
             "Testes de Correlação", 
             "Q-Estatística", 
             "Q-Exponencial", 
@@ -543,6 +493,8 @@ def main():
         regressao_section()
     elif menu == "Teste de Hipótese":
         hipotese_section()
+    elif menu == "Teste t":
+        teste_t_section()
     elif menu == "Testes de Correlação":
         st.subheader("Testes de Correlação")
         st.markdown("""
