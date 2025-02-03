@@ -18,9 +18,8 @@ except ImportError:
 # ============================
 # FUNÇÕES AUXILIARES E DATASETS
 # ============================
-
 def create_well_dataset():
-    """Dataset de Poços Artesianos (exemplo)"""
+    """Cria um dataset de Poços Artesianos (exemplo real)"""
     data = {
         "Well_ID": [f"Well_{i:03d}" for i in range(1, 11)],
         "Flow_m3_per_h": [120, 95, 150, 80, 110, 130, 105, 90, 115, 100],
@@ -39,7 +38,7 @@ def create_well_dataset():
     return pd.DataFrame(data)
 
 def create_synthetic_data(n_rows=100):
-    """Cria um dataset sintético com dados numéricos inteiros e categóricos."""
+    """Gera um dataset sintético com dados numéricos (inteiros e reais) e categóricos."""
     np.random.seed(42)
     df = pd.DataFrame({
         "ID": range(1, n_rows + 1),
@@ -131,7 +130,7 @@ def fit_q_exponential(data):
     return popt  # lam, q
 
 # ============================
-# FUNÇÕES DE CORRELAÇÃO (incluindo as inovações)
+# FUNÇÕES DE CORRELAÇÃO (incluindo inovações)
 # ============================
 def correlacao_pearson(x, y):
     corr, pval = stats.pearsonr(x, y)
@@ -147,7 +146,7 @@ def correlacao_kendall(x, y):
 
 def correlacao_distancia(x, y):
     if not dcor_installed:
-        st.error("O módulo 'dcor' não está instalado. Instale-o para utilizar esta funcionalidade.")
+        st.error("O módulo 'dcor' não está instalado. Instale-o via 'pip install dcor' para utilizar esta funcionalidade.")
         return None
     return dcor.distance_correlation(x, y)
 
@@ -165,8 +164,8 @@ def correlacao_parcial(x, y, control):
 def clustering_section():
     st.subheader("Técnicas de Clustering")
     st.markdown("""
-    Nesta seção, você pode aplicar diferentes técnicas de clustering para segmentar seus dados.
-    Escolha o algoritmo e os parâmetros para visualizar a segmentação.
+    Nesta seção, você pode aplicar diferentes técnicas de clustering para segmentar seus dados.  
+    Selecione o algoritmo, defina os parâmetros e visualize a segmentação.
     """)
     file = st.file_uploader("Envie um arquivo CSV para clustering", type=["csv"], key="clustering")
     if file:
@@ -175,14 +174,11 @@ def clustering_section():
         if len(colunas_num) < 2:
             st.error("Selecione um dataset com ao menos duas variáveis numéricas.")
             return
-        # Selecione as variáveis para clustering (ex.: duas para visualização)
         var1 = st.selectbox("Selecione a primeira variável", colunas_num, key="clust_var1")
         var2 = st.selectbox("Selecione a segunda variável", colunas_num, key="clust_var2")
         data = df[[var1, var2]].values
         
-        # Escolha o algoritmo
-        algoritmo = st.selectbox("Escolha o algoritmo de clustering", 
-                                 options=["KMeans", "Hierarchical", "DBSCAN"])
+        algoritmo = st.selectbox("Escolha o algoritmo de clustering", options=["KMeans", "Hierarchical", "DBSCAN"])
         
         if algoritmo == "KMeans":
             n_clusters = st.number_input("Número de clusters", min_value=2, value=3, step=1)
@@ -207,10 +203,10 @@ def clustering_section():
         st.dataframe(df.head())
 
 # ============================
-# FUNÇÃO PARA CSV SINTÉTICO
+# FUNÇÃO PARA GERAR CSV SINTÉTICO
 # ============================
 def synthetic_csv_section():
-    st.subheader("Gerador de CSV Sintético")
+    st.subheader("Gerador de CSV Sintético para Teste")
     n_rows = st.number_input("Número de linhas", min_value=10, value=100, step=10)
     df_synth = create_synthetic_data(n_rows)
     st.markdown("**Pré-visualização do dataset sintético:**")
@@ -219,7 +215,7 @@ def synthetic_csv_section():
     st.download_button("Baixar CSV Sintético", data=csv_bytes, file_name="sintetico.csv")
 
 # ============================
-# OUTRAS SEÇÕES (exemplos simplificados)
+# OUTRAS SEÇÕES (Exemplos)
 # ============================
 def estatistica_descritiva_section():
     st.subheader("Estatísticas Descritivas")
@@ -287,7 +283,6 @@ def regressao_section():
         dep_var = st.selectbox("Variável dependente", df.select_dtypes(include=[np.number]).columns)
         indep_vars = st.multiselect("Variáveis independentes", df.columns.tolist())
         if dep_var and indep_vars:
-            # Se a variável for categórica, encapsula com C() para tratamento no modelo
             terms = [f"C({var})" if df[var].dtype == object else var for var in indep_vars]
             formula = f"{dep_var} ~ " + " + ".join(terms)
             resultado = regressao_linear(df, formula)
@@ -343,8 +338,8 @@ def q_exponencial_section():
 # FUNÇÃO PRINCIPAL DO APLICATIVO
 # ============================
 def main():
-    st.title("Plataforma de Análises Estatísticas e Machine Learning")
-    st.markdown("Esta aplicação integra diversas técnicas estatísticas e de clustering para análise robusta de dados.")
+    st.title("Plataforma de Análises Estatísticas e DataMining pH")
+    st.markdown("Uma ferramenta robusta, crisp e minuciosa para tratamento, análise e modelagem de dados. Inclui gerador de CSV sintético para teste e diversas técnicas de clustering e estatística.")
     
     menu = st.sidebar.selectbox("Selecione a Seção", 
         options=[
@@ -404,9 +399,75 @@ def main():
         hipotese_section()
     
     elif menu == "Testes de Correlação":
-        # Aqui utilizamos a seção de correlações inovadoras
         st.subheader("Testes de Correlação")
-        correlacoes_section()
+        # Utiliza a seção de correlações com técnicas inovadoras
+        st.markdown("""
+        Aqui você pode aplicar os testes tradicionais (Pearson, Spearman, Kendall) e técnicas inovadoras (Correlação de Distância e Correlação Parcial).
+        """)
+        # Opção de tratamento dos dados antes dos testes
+        st.markdown("### Opções de Tratamento de Dados")
+        st.markdown("""
+        **Escolha como tratar seus dados antes da análise:**
+        - **Remover valores ausentes:** Exclui as linhas com dados faltantes.
+        - **Substituir com a média:** Preenche os valores faltantes com a média de cada coluna.
+        """)
+        tratamento = st.radio("Selecione o método de tratamento:", 
+                               options=["Remover valores ausentes", "Substituir com a média"], key="trat_corr")
+        file_corr = st.file_uploader("Envie um CSV para testes de correlação", type=["csv"], key="corr_inov")
+        if file_corr:
+            df_corr = pd.read_csv(file_corr)
+            if tratamento == "Remover valores ausentes":
+                df_corr = df_corr.dropna()
+            else:
+                for col in df_corr.select_dtypes(include=[np.number]).columns:
+                    df_corr[col].fillna(df_corr[col].mean(), inplace=True)
+            st.markdown("**Pré-visualização dos dados tratados:**")
+            st.dataframe(df_corr.head())
+            # Seleção das variáveis
+            colunas_num = [c for c in df_corr.columns if pd.api.types.is_numeric_dtype(df_corr[c])]
+            if len(colunas_num) < 2:
+                st.error("São necessárias ao menos duas variáveis numéricas.")
+            else:
+                x_var = st.selectbox("Escolha a variável X", colunas_num, key="x_corr")
+                y_var = st.selectbox("Escolha a variável Y", colunas_num, key="y_corr")
+                st.markdown("### Resultados dos Testes de Correlação")
+                if st.button("Calcular Correlação de Pearson"):
+                    corr, pval = correlacao_pearson(df_corr[x_var], df_corr[y_var])
+                    st.write(f"**Pearson:** r = {corr:.4f}, p-valor = {pval:.4f}")
+                    st.info("Interpretação: Um valor de r próximo de 1 (ou -1) indica forte relação linear; p < 0.05 indica significância.")
+                if st.button("Calcular Correlação de Spearman"):
+                    corr, pval = correlacao_spearman(df_corr[x_var], df_corr[y_var])
+                    st.write(f"**Spearman:** r = {corr:.4f}, p-valor = {pval:.4f}")
+                    st.info("Interpretação: Indicado para dados não normalmente distribuídos; valores altos indicam forte relação na ordem dos dados.")
+                if st.button("Calcular Correlação de Kendall"):
+                    corr, pval = correlacao_kendall(df_corr[x_var], df_corr[y_var])
+                    st.write(f"**Kendall:** tau = {corr:.4f}, p-valor = {pval:.4f}")
+                    st.info("Interpretação: Ideal para conjuntos pequenos ou com outliers; valores altos indicam boa concordância na ordem dos valores.")
+                if st.button("Calcular Correlação de Distância"):
+                    x_data = df_corr[x_var].to_numpy()
+                    y_data = df_corr[y_var].to_numpy()
+                    min_len = min(len(x_data), len(y_data))
+                    x_data, y_data = x_data[:min_len], y_data[:min_len]
+                    corr = correlacao_distancia(x_data, y_data)
+                    if corr is not None:
+                        st.write(f"**Distância:** correlação = {corr:.4f}")
+                        st.info("Interpretação: Valores próximos de 0 indicam pouca relação; próximos de 1 indicam alta dependência, mesmo que não linear.")
+                st.markdown("#### Correlação Parcial (Controlando uma terceira variável)")
+                control_var = st.selectbox("Escolha a variável de controle", colunas_num, key="control_corr")
+                if st.button("Calcular Correlação Parcial"):
+                    common_index = df_corr[[x_var, y_var, control_var]].dropna().index
+                    x_data = df_corr.loc[common_index, x_var]
+                    y_data = df_corr.loc[common_index, y_var]
+                    control_data = df_corr.loc[common_index, control_var]
+                    r, pval = correlacao_parcial(x_data, y_data, control_data)
+                    st.write(f"**Parcial:** r = {r:.4f}, p-valor = {pval:.4f}")
+                    st.info("Interpretação: Se a relação entre X e Y se mantém alta após remover o efeito da variável de controle, indica uma conexão robusta.")
+                if st.checkbox("Exibir gráfico de dispersão com tendência"):
+                    fig, ax = plt.subplots(figsize=(6,4))
+                    sns.scatterplot(data=df_corr, x=x_var, y=y_var, ax=ax)
+                    sns.regplot(data=df_corr, x=x_var, y=y_var, scatter=False, ax=ax, color="red")
+                    ax.set_title(f"Relação entre {x_var} e {y_var}")
+                    st.pyplot(fig)
     
     elif menu == "Q-Estatística":
         q_estat_section()
