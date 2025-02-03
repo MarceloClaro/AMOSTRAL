@@ -154,7 +154,7 @@ def regressao_linear(df, formula: str):
 def teste_t_independente(df, grupo, valor):
     """
     Realiza o teste t de Student para duas amostras independentes.
-    A hipótese nula é que as médias dos dois grupos são iguais.
+    H0: as médias dos dois grupos são iguais.
     """
     grupos = df[grupo].unique()
     if len(grupos) != 2:
@@ -440,8 +440,9 @@ def q_exponencial_section():
 def main():
     st.title("PhD Tool para Análise e Tratamento de Dados")
     st.markdown("Uma ferramenta robusta e flexível para análises estatísticas, modelagem e tratamento de dados. "
-                "Inclui gerador de CSV sintético para teste, calculadora de tamanho de amostra, técnicas de clustering, ANOVA, testes t e muito mais.")
+                "Inclui gerador de CSV sintético para teste, calculadora de tamanho de amostra, técnicas de clustering, ANOVA, testes t, e muito mais.")
     
+    # 16 seções no sidebar
     menu = st.sidebar.selectbox("Selecione a Seção", 
         options=[
             "Calculadora de Tamanho de Amostra",
