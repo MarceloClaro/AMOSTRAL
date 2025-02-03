@@ -92,19 +92,60 @@ def teste_mannwhitney(data: pd.DataFrame, col_numerica, col_categ):
     return stats.mannwhitneyu(grupo1, grupo2)
 
 # ============================
-# FUNÇÕES DE TWO-WAY ANOVA
+# FUNÇÕES DE ANOVA
 # ============================
-def anova_two_way(data: pd.DataFrame, dep_var, fator1, fator2):
-    formula = f"{dep_var} ~ C({fator1}) + C({fator2}) + C({fator1}):C({fator2})"
-    model = ols(formula, data=data).fit()
+def anova_unidirecional(df, dep_var, fator):
+    """
+    Realiza uma ANOVA unidirecional, comparando as médias de dois ou mais grupos.
+    H0: as médias dos grupos são iguais.
+    """
+    st.markdown("**ANOVA Unidirecional:**")
+    st.markdown("""
+    Este teste envolve uma única variável independente e é usado para comparar as médias de dois ou mais grupos independentes.
+    A hipótese nula é que não há diferença significativa entre as médias dos grupos.
+    """)
+    formula = f"{dep_var} ~ C({fator})"
+    model = ols(formula, data=df).fit()
     anova_table = sm.stats.anova_lm(model, typ=2)
     return anova_table
+
+def anova_bidirecional(df, dep_var, fator1, fator2):
+    """
+    Realiza uma ANOVA bidirecional, avaliando o efeito de duas variáveis independentes e sua interação.
+    """
+    st.markdown("**ANOVA Bidirecional:**")
+    st.markdown("""
+    Este teste envolve duas variáveis independentes. Ele investiga o efeito simultâneo de duas variáveis categóricas
+    sobre a variável dependente e também verifica se há interação entre esses fatores.
+    """)
+    formula = f"{dep_var} ~ C({fator1}) + C({fator2}) + C({fator1}):C({fator2})"
+    model = ols(formula, data=df).fit()
+    anova_table = sm.stats.anova_lm(model, typ=2)
+    return anova_table
+
+def manova_analysis(df, dep_vars, fatores):
+    """
+    Realiza a MANOVA (Análise de Variância Multivariada) para avaliar o efeito de variáveis independentes
+    sobre múltiplas variáveis dependentes.
+    """
+    st.markdown("**MANOVA (Análise de Variância Multivariada):**")
+    st.markdown("""
+    Este método é utilizado quando há múltiplas variáveis dependentes.
+    O objetivo é determinar se as variáveis independentes têm um efeito significativo sobre as variáveis dependentes.
+    """)
+    dep_formula = " + ".join(dep_vars)
+    fatores_formula = " + ".join([f"C({f})" for f in fatores])
+    formula = f"{dep_formula} ~ {fatores_formula}"
+    from statsmodels.multivariate.manova import MANOVA
+    manova = MANOVA.from_formula(formula, data=df)
+    result = manova.mv_test()
+    return result
 
 # ============================
 # FUNÇÕES DE REGRESSÃO
 # ============================
-def regressao_linear(data: pd.DataFrame, formula: str):
-    model = ols(formula, data=data).fit()
+def regressao_linear(df, formula: str):
+    model = ols(formula, data=df).fit()
     return model.summary().as_text()
 
 # ============================
@@ -114,8 +155,8 @@ def cochrane_q(effects, variances):
     w = 1.0 / np.array(variances)
     theta_fixed = np.sum(w * effects) / np.sum(w)
     Q = np.sum(w * (effects - theta_fixed)**2)
-    df = len(effects) - 1
-    p_val = 1 - stats.chi2.cdf(Q, df)
+    df_anova = len(effects) - 1
+    p_val = 1 - stats.chi2.cdf(Q, df_anova)
     return Q, p_val
 
 def q_exponential_pdf(x, lam, q):
@@ -201,7 +242,7 @@ def clustering_section():
             labels = model.fit_predict(data)
         
         df["Cluster"] = labels
-        st.markdown("**Resumo dos Clusters (médias das variáveis selecionadas):**")
+        st.markdown("**Resumo dos Clusters**")
         resumo = df.groupby("Cluster")[variaveis].mean().reset_index()
         st.dataframe(resumo)
         
@@ -294,6 +335,48 @@ def sample_size_calculator_section():
             st.error("Erro no cálculo do tamanho amostral para média.")
 
 # ============================
+# SEÇÃO DE ANOVA AMPLIADA
+# ============================
+def anova_section():
+    st.subheader("ANOVA")
+    st.markdown("""
+    **ANOVA Unidirecional:**  
+    Testa se existem diferenças significativas entre as médias de três ou mais grupos independentes, com uma única variável independente.
+
+    **ANOVA Bidirecional:**  
+    Testa o efeito simultâneo de duas variáveis independentes (fatores) e sua interação na variável dependente.
+
+    **MANOVA:**  
+    Analisa o efeito de uma ou mais variáveis independentes sobre múltiplas variáveis dependentes.
+    
+    **Diferença entre teste ANOVA e teste t de Student:**  
+    O teste t de Student compara as médias de dois grupos, enquanto a ANOVA permite comparar três ou mais grupos.
+    """)
+    tipo_anova = st.radio("Selecione o tipo de ANOVA", options=["Unidirecional", "Bidirecional", "MANOVA"], key="tipo_anova")
+    file = st.file_uploader("Envie um CSV para ANOVA", type=["csv"], key="anova")
+    if file:
+        df = pd.read_csv(file).dropna()
+        if tipo_anova == "Unidirecional":
+            dep_var = st.selectbox("Variável dependente (numérica)", df.select_dtypes(include=[np.number]).columns, key="uni_dep")
+            fator = st.selectbox("Fator (variável categórica)", df.select_dtypes(include=["object"]).columns, key="uni_fator")
+            tabela = anova_unidirecional(df, dep_var, fator)
+            st.dataframe(tabela)
+        elif tipo_anova == "Bidirecional":
+            dep_var = st.selectbox("Variável dependente (numérica)", df.select_dtypes(include=[np.number]).columns, key="bi_dep")
+            fator1 = st.selectbox("Fator 1 (categórico)", df.select_dtypes(include=["object"]).columns, key="bi_fator1")
+            fator2 = st.selectbox("Fator 2 (categórico)", df.select_dtypes(include=["object"]).columns, key="bi_fator2")
+            tabela = anova_bidirecional(df, dep_var, fator1, fator2)
+            st.dataframe(tabela)
+        elif tipo_anova == "MANOVA":
+            dep_vars = st.multiselect("Variáveis dependentes (numéricas)", df.select_dtypes(include=[np.number]).columns, key="manova_dep")
+            fatores = st.multiselect("Fatores (categóricos)", df.select_dtypes(include=["object"]).columns, key="manova_fator")
+            if len(dep_vars) < 1 or len(fatores) < 1:
+                st.error("Selecione pelo menos uma variável dependente e um fator.")
+            else:
+                result = manova_analysis(df, dep_vars, fatores)
+                st.write(result)
+
+# ============================
 # OUTRAS SEÇÕES (Exemplos)
 # ============================
 def estatistica_descritiva_section():
@@ -342,17 +425,6 @@ def nao_parametricos_section():
             st.error("A variável categórica deve ter exatamente 2 grupos.")
         else:
             st.write(f"Mann-Whitney: Estatística = {stat:.4f}, p-valor = {p:.4f}")
-
-def anova_section():
-    st.subheader("Two-Way ANOVA")
-    file = st.file_uploader("Envie um CSV", type=["csv"], key="anova")
-    if file:
-        df = pd.read_csv(file).dropna()
-        dep_var = st.selectbox("Variável dependente", df.select_dtypes(include=[np.number]).columns)
-        cat1 = st.selectbox("Fator 1", df.select_dtypes(include=["object"]).columns, key="anova_cat1")
-        cat2 = st.selectbox("Fator 2", df.select_dtypes(include=["object"]).columns, key="anova_cat2")
-        anova_table = anova_two_way(df, dep_var, cat1, cat2)
-        st.dataframe(anova_table)
 
 def regressao_section():
     st.subheader("Regressão Linear")
@@ -419,7 +491,7 @@ def q_exponencial_section():
 def main():
     st.title("PhD Tool para Análise e Tratamento de Dados")
     st.markdown("Uma ferramenta robusta e flexível para análises estatísticas, modelagem e tratamento de dados. "
-                "Inclui gerador de CSV sintético para teste, calculadora de tamanho de amostra, técnicas de clustering e muito mais.")
+                "Inclui gerador de CSV sintético para teste, calculadora de tamanho de amostra, técnicas de clustering, ANOVA, e muito mais.")
     
     menu = st.sidebar.selectbox("Selecione a Seção", 
         options=[
@@ -431,7 +503,7 @@ def main():
             "Intervalo de Confiança - Média", 
             "Teste de Normalidade", 
             "Testes Não-Paramétricos", 
-            "Two-Way ANOVA", 
+            "ANOVA", 
             "Regressão Linear", 
             "Teste de Hipótese", 
             "Testes de Correlação", 
@@ -465,7 +537,7 @@ def main():
         normalidade_section()
     elif menu == "Testes Não-Paramétricos":
         nao_parametricos_section()
-    elif menu == "Two-Way ANOVA":
+    elif menu == "ANOVA":
         anova_section()
     elif menu == "Regressão Linear":
         regressao_section()
