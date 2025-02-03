@@ -127,7 +127,7 @@ def fit_q_exponential(data):
     xvals = 0.5*(bins[1:] + bins[:-1])
     yvals = counts
     initial_guess = [0.1, 1.2]
-    popt, _ =  stats.curve_fit(q_exponential_pdf, xvals, yvals, p0=initial_guess, maxfev=10000)
+    popt, _ = stats.curve_fit(q_exponential_pdf, xvals, yvals, p0=initial_guess, maxfev=10000)
     return popt  # lam, q
 
 # ============================
@@ -165,19 +165,25 @@ def correlacao_parcial(x, y, control):
 def clustering_section():
     st.subheader("Técnicas de Clustering")
     st.markdown("""
-    Nesta seção, você pode aplicar diferentes técnicas de clustering para segmentar seus dados.  
-    Selecione o algoritmo, defina os parâmetros e visualize a segmentação.
+    Nesta seção, você pode aplicar técnicas de clustering para segmentar seus dados.
+    Escolha as variáveis de interesse, o algoritmo e visualize o gráfico resultante.
     """)
     file = st.file_uploader("Envie um arquivo CSV para clustering", type=["csv"], key="clustering")
     if file:
         df = pd.read_csv(file).dropna()
+        # Seleciona as colunas numéricas disponíveis
         colunas_num = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-        if len(colunas_num) < 2:
-            st.error("Selecione um dataset com ao menos duas variáveis numéricas.")
+        if len(colunas_num) < 1:
+            st.error("É necessário ao menos uma variável numérica para realizar o clustering.")
             return
-        var1 = st.selectbox("Selecione a primeira variável", colunas_num, key="clust_var1")
-        var2 = st.selectbox("Selecione a segunda variável", colunas_num, key="clust_var2")
-        data = df[[var1, var2]].values
+        # Permite que o usuário escolha uma ou mais variáveis para o clustering
+        variaveis = st.multiselect("Selecione as variáveis para o clustering", colunas_num, default=colunas_num[:2])
+        if len(variaveis) < 1:
+            st.error("Selecione pelo menos uma variável.")
+            return
+        
+        # Se o usuário escolher duas ou mais variáveis, monta o dataset de clustering
+        data = df[variaveis].values
         
         algoritmo = st.selectbox("Escolha o algoritmo de clustering", options=["KMeans", "Hierarchical", "DBSCAN"])
         
@@ -197,10 +203,23 @@ def clustering_section():
         
         df["Cluster"] = labels
         st.markdown("**Visualização dos Clusters**")
-        fig, ax = plt.subplots(figsize=(6,4))
-        sns.scatterplot(x=df[var1], y=df[var2], hue=df["Cluster"], palette="viridis", ax=ax)
-        ax.set_title(f"Clustering com {algoritmo}")
-        st.pyplot(fig)
+        # Se mais de duas variáveis foram escolhidas, utiliza PCA para reduzir a dimensão para 2D (opcional)
+        if len(variaveis) > 2:
+            from sklearn.decomposition import PCA
+            pca = PCA(n_components=2)
+            data_2d = pca.fit_transform(data)
+            df_plot = pd.DataFrame(data_2d, columns=["PC1", "PC2"])
+            df_plot["Cluster"] = labels
+            fig, ax = plt.subplots(figsize=(6,4))
+            sns.scatterplot(x="PC1", y="PC2", hue="Cluster", data=df_plot, palette="viridis", ax=ax)
+            ax.set_title(f"Clustering com {algoritmo} (reduzido por PCA)")
+            st.pyplot(fig)
+        else:
+            # Se apenas duas variáveis foram selecionadas, plota diretamente
+            fig, ax = plt.subplots(figsize=(6,4))
+            sns.scatterplot(x=variaveis[0], y=variaveis[1], hue="Cluster", data=df, palette="viridis", ax=ax)
+            ax.set_title(f"Clustering com {algoritmo}")
+            st.pyplot(fig)
         st.dataframe(df.head())
 
 # ============================
