@@ -3,12 +3,13 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import math
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
 from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
 
-# Tenta importar dcor; se não for possível, desativa a funcionalidade
+# Tenta importar dcor; se não for possível, desativa essa funcionalidade
 try:
     import dcor
     dcor_installed = True
@@ -215,6 +216,63 @@ def synthetic_csv_section():
     st.download_button("Baixar CSV Sintético", data=csv_bytes, file_name="sintetico.csv")
 
 # ============================
+# FUNÇÕES DA CALCULADORA DE TAMANHO DE AMOSTRA
+# ============================
+def obter_z(conf):
+    if conf <= 80:
+        return 1.28
+    elif conf <= 85:
+        return 1.44
+    elif conf <= 90:
+        return 1.64
+    elif conf <= 95:
+        return 1.96
+    elif conf < 100:
+        return 2.58
+    else:
+        return 2.58
+
+def tamanho_amostral_proporcao(populacao, nivel_confianca, margem_erro, p=0.5):
+    Z = obter_z(nivel_confianca)
+    e = margem_erro / 100.0
+    if e == 0:
+        return None
+    n0 = (Z**2 * p * (1 - p)) / (e**2)
+    n_ajustado = n0 / (1 + (n0 - 1) / populacao)
+    return math.ceil(n_ajustado)
+
+def tamanho_amostral_media(populacao, nivel_confianca, margem_erro, desvio_padrao):
+    Z = obter_z(nivel_confianca)
+    if margem_erro <= 0:
+        return None
+    n0 = (Z * desvio_padrao / margem_erro)**2
+    n_ajustado = n0 / (1 + (n0 - 1) / populacao)
+    return math.ceil(n_ajustado)
+
+def sample_size_calculator_section():
+    st.subheader("Calculadora de Tamanho de Amostra")
+    st.markdown("Esta ferramenta calcula o tamanho de amostra necessário para uma análise estatística robusta, seja para proporção ou para média.")
+    tipo = st.radio("Selecione o tipo de cálculo", options=["Proporção", "Média"], key="tipo_amostra")
+    populacao = st.number_input("Tamanho da População", min_value=1, value=1000)
+    nivel_confianca = st.slider("Nível de Confiança (%)", min_value=80, max_value=99, value=95)
+    if tipo == "Proporção":
+        margem_erro = st.number_input("Margem de Erro (%)", min_value=0.1, value=5.0)
+        p_obs = st.number_input("Proporção estimada (p)", min_value=0.0, max_value=1.0, value=0.5, step=0.01)
+        resultado = tamanho_amostral_proporcao(populacao, nivel_confianca, margem_erro, p_obs)
+        if resultado is not None:
+            st.write(f"O tamanho amostral recomendado para proporção é: {resultado}")
+        else:
+            st.error("Erro no cálculo do tamanho amostral para proporção.")
+    else:
+        margem_erro = st.number_input("Margem de Erro (valor absoluto)", min_value=0.1, value=5.0)
+        desvio_padrao = st.number_input("Desvio-Padrão", min_value=0.1, value=10.0)
+        resultado = tamanho_amostral_media(populacao, nivel_confianca, margem_erro, desvio_padrao)
+        if resultado is not None:
+            st.write(f"O tamanho amostral recomendado para média é: {resultado}")
+        else:
+            st.error("Erro no cálculo do tamanho amostral para média.")
+
+# ============================
 # OUTRAS SEÇÕES (Exemplos)
 # ============================
 def estatistica_descritiva_section():
@@ -338,11 +396,13 @@ def q_exponencial_section():
 # FUNÇÃO PRINCIPAL DO APLICATIVO
 # ============================
 def main():
-    st.title("Plataforma de Análises Estatísticas e DataMining pH")
-    st.markdown("Uma ferramenta robusta, crisp e minuciosa para tratamento, análise e modelagem de dados. Inclui gerador de CSV sintético para teste e diversas técnicas de clustering e estatística.")
+    st.title("PhD Tool para Análise e Tratamento de Dados")
+    st.markdown("Uma ferramenta robusta e flexível para análises estatísticas, modelagem e tratamento de dados. "
+                "Inclui gerador de CSV sintético para teste, calculadora de tamanho de amostra, técnicas de clustering e muito mais.")
     
     menu = st.sidebar.selectbox("Selecione a Seção", 
         options=[
+            "Calculadora de Tamanho de Amostra",
             "Dataset de Poços Artesianos", 
             "CSV Sintético", 
             "Estatísticas Descritivas", 
@@ -359,7 +419,9 @@ def main():
             "Clustering"
         ])
     
-    if menu == "Dataset de Poços Artesianos":
+    if menu == "Calculadora de Tamanho de Amostra":
+        sample_size_calculator_section()
+    elif menu == "Dataset de Poços Artesianos":
         st.subheader("Dataset de Poços Artesianos")
         df_wells = create_well_dataset()
         st.dataframe(df_wells)
@@ -370,41 +432,29 @@ def main():
             sns.scatterplot(data=df_wells, x="Salinity_ppm", y="Flow_m3_per_h", hue="Geological_Formation", ax=ax)
             ax.set_title("Salinidade vs Vazão por Formação Geológica")
             st.pyplot(fig)
-    
     elif menu == "CSV Sintético":
         synthetic_csv_section()
-    
     elif menu == "Estatísticas Descritivas":
         estatistica_descritiva_section()
-    
     elif menu == "Intervalo de Confiança - Proporção":
         intervalo_confianca_section(tipo="proporcao")
-    
     elif menu == "Intervalo de Confiança - Média":
         intervalo_confianca_section(tipo="media")
-    
     elif menu == "Teste de Normalidade":
         normalidade_section()
-    
     elif menu == "Testes Não-Paramétricos":
         nao_parametricos_section()
-    
     elif menu == "Two-Way ANOVA":
         anova_section()
-    
     elif menu == "Regressão Linear":
         regressao_section()
-    
     elif menu == "Teste de Hipótese":
         hipotese_section()
-    
     elif menu == "Testes de Correlação":
         st.subheader("Testes de Correlação")
-        # Utiliza a seção de correlações com técnicas inovadoras
         st.markdown("""
         Aqui você pode aplicar os testes tradicionais (Pearson, Spearman, Kendall) e técnicas inovadoras (Correlação de Distância e Correlação Parcial).
         """)
-        # Opção de tratamento dos dados antes dos testes
         st.markdown("### Opções de Tratamento de Dados")
         st.markdown("""
         **Escolha como tratar seus dados antes da análise:**
@@ -423,7 +473,6 @@ def main():
                     df_corr[col].fillna(df_corr[col].mean(), inplace=True)
             st.markdown("**Pré-visualização dos dados tratados:**")
             st.dataframe(df_corr.head())
-            # Seleção das variáveis
             colunas_num = [c for c in df_corr.columns if pd.api.types.is_numeric_dtype(df_corr[c])]
             if len(colunas_num) < 2:
                 st.error("São necessárias ao menos duas variáveis numéricas.")
@@ -468,13 +517,10 @@ def main():
                     sns.regplot(data=df_corr, x=x_var, y=y_var, scatter=False, ax=ax, color="red")
                     ax.set_title(f"Relação entre {x_var} e {y_var}")
                     st.pyplot(fig)
-    
     elif menu == "Q-Estatística":
         q_estat_section()
-    
     elif menu == "Q-Exponencial":
         q_exponencial_section()
-    
     elif menu == "Clustering":
         clustering_section()
 
